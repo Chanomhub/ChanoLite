@@ -123,6 +123,8 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: featuredArticles.length,
             itemBuilder: (context, index) {
               final article = featuredArticles[index];
+              final imageUrl =
+                  article.coverImage ?? article.mainImage ?? article.backgroundImage;
               return SizedBox(
                 width: 150,
                 child: Card(
@@ -143,19 +145,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         ClipRRect(
                           borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(8)),
-                          child: Image.network(
-                            article.mainImage ?? '',
-                            height: 120,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                height: 120,
-                                color: Colors.grey[300],
-                                child: const Icon(Icons.article),
-                              );
-                            },
-                          ),
+                          child: imageUrl != null
+                              ? Image.network(
+                                  imageUrl,
+                                  height: 120,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      height: 120,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.article),
+                                    );
+                                  },
+                                )
+                              : Container(
+                                  height: 120,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.article),
+                                ),
                         ),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
@@ -194,14 +202,16 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: _articles.length,
           itemBuilder: (context, index) {
             final article = _articles[index];
+            final imageUrl =
+                article.coverImage ?? article.mainImage ?? article.backgroundImage;
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: ListTile(
-                leading: article.mainImage != null
+                leading: imageUrl != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
-                          article.mainImage!,
+                          imageUrl,
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
