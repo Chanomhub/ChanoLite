@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:chanolite/models/download_model.dart';
 import 'api_client.dart';
 

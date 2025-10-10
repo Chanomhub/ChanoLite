@@ -17,12 +17,25 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => DownloadManager(),
+      create: (context) => DownloadManager()..initialize(),
       child: MaterialApp(
         title: 'ChanoLite',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.deepPurple,
+            brightness: Brightness.dark,
+          ),
           useMaterial3: true,
+          scaffoldBackgroundColor: Colors.black,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+          ),
+          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+            backgroundColor: Colors.black,
+            selectedItemColor: Colors.deepPurpleAccent,
+            unselectedItemColor: Colors.white70,
+          ),
         ),
         home: const MainScreen(),
       ),
@@ -40,11 +53,11 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _widgetOptions = <Widget>[
-    HomeScreen(),
-    SearchScreen(),
-    GameLibraryScreen(),
-    SettingsScreen(),
+  static final List<Widget> _pages = <Widget>[
+    const HomeScreen(),
+    const SearchScreen(),
+    const GameLibraryScreen(),
+    const SettingsScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -58,7 +71,12 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: Column(
         children: [
-          Expanded(child: Center(child: _widgetOptions.elementAt(_selectedIndex))),
+          Expanded(
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: _pages,
+            ),
+          ),
           const GlobalDownloadIndicator(),
         ],
       ),
@@ -83,7 +101,6 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepPurple,
         onTap: _onItemTapped,
       ),
     );
