@@ -5,11 +5,12 @@ class ArticleService {
   final ApiClient _apiClient;
 
   ArticleService({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient();
+    : _apiClient = apiClient ?? ApiClient();
 
   Future<ArticlesResponse> getArticles({
     int limit = 20,
     int offset = 0,
+    String? query,
     String? author,
     String? favorited,
     String? tag,
@@ -26,6 +27,7 @@ class ArticleService {
     final queryParameters = <String, String>{
       'limit': limit.toString(),
       'offset': offset.toString(),
+      if (query != null && query.isNotEmpty) 'q': query,
       if (author != null) 'author': author,
       if (favorited != null) 'favorited': favorited,
       if (tag != null) 'tag': tag,

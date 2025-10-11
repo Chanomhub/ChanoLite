@@ -2,6 +2,7 @@ import 'package:chanolite/services/api/article_service.dart';
 import 'package:flutter/material.dart';
 import 'models/article_model.dart';
 import 'article_detail_screen.dart';
+import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,16 +43,36 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _navigateToSearch({
+    String? query,
+    String? tag,
+    String? category,
+    String? platform,
+    String? engine,
+    String? status,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchScreen(
+          initialQuery: query,
+          initialTag: tag,
+          initialCategory: category,
+          initialPlatform: platform,
+          initialEngine: engine,
+          initialStatus: status,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('ChanoLite - Home'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadArticles,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadArticles),
         ],
       ),
       body: _buildBody(),
@@ -60,9 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
@@ -84,9 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_articles.isEmpty) {
-      return const Center(
-        child: Text('No articles found.'),
-      );
+      return const Center(child: Text('No articles found.'));
     }
 
     return RefreshIndicator(
@@ -95,12 +112,103 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildQuickSearchSection(),
             _buildFeaturedSection(),
             _buildAllArticlesSection(),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildQuickSearchSection() {
+    final topTags = _topItems((article) => article.tagList);
+    final topPlatforms = _topItems((article) => article.platformList);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.search),
+              title: const Text('Search articles'),
+              subtitle: const Text('Find guides, downloads, and updates'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () => _navigateToSearch(),
+            ),
+          ),
+          if (topTags.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Popular tags', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: topTags
+                  .map(
+                    (tag) => ActionChip(
+                      label: Text('#$tag'),
+                      onPressed: () => _navigateToSearch(tag: tag),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (topPlatforms.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Platforms', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: topPlatforms
+                  .map(
+                    (platform) => ActionChip(
+                      label: Text(platform),
+                      onPressed: () => _navigateToSearch(platform: platform),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<String> _topItems(
+    List<String> Function(Article) extractor, {
+    int limit = 6,
+  }) {
+    final Map<String, int> counts = {};
+    final Map<String, String> displayLabels = {};
+
+    for (final article in _articles) {
+      final values = extractor(article);
+      for (final value in values) {
+        final trimmed = value.trim();
+        if (trimmed.isEmpty) continue;
+        final key = trimmed.toLowerCase();
+        counts[key] = (counts[key] ?? 0) + 1;
+        displayLabels[key] = trimmed;
+      }
+    }
+
+    final sortedKeys = counts.keys.toList()
+      ..sort((a, b) {
+        final countCompare = counts[b]!.compareTo(counts[a]!);
+        if (countCompare != 0) {
+          return countCompare;
+        }
+        return displayLabels[a]!.compareTo(displayLabels[b]!);
+      });
+
+    return sortedKeys.take(limit).map((key) => displayLabels[key]!).toList();
   }
 
   Widget _buildFeaturedSection() {
@@ -124,7 +232,9 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context, index) {
               final article = featuredArticles[index];
               final imageUrl =
-                  article.coverImage ?? article.mainImage ?? article.backgroundImage;
+                  article.coverImage ??
+                  article.mainImage ??
+                  article.backgroundImage;
               return SizedBox(
                 width: 150,
                 child: Card(
@@ -144,7 +254,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(8)),
+                            top: Radius.circular(8),
+                          ),
                           child: imageUrl != null
                               ? Image.network(
                                   imageUrl,
@@ -203,7 +314,9 @@ class _HomeScreenState extends State<HomeScreen> {
           itemBuilder: (context, index) {
             final article = _articles[index];
             final imageUrl =
-                article.coverImage ?? article.mainImage ?? article.backgroundImage;
+                article.coverImage ??
+                article.mainImage ??
+                article.backgroundImage;
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: ListTile(
