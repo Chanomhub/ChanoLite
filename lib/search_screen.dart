@@ -104,14 +104,16 @@ class _SearchScreenState extends State<SearchScreen> {
         itemCount: _articles.length,
         itemBuilder: (context, index) {
           final article = _articles[index];
+          final imageUrl =
+              article.coverImage ?? article.mainImage ?? article.backgroundImage;
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: ListTile(
-              leading: article.mainImage != null
+              leading: imageUrl != null
                   ? ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
-                  article.mainImage!,
+                  imageUrl,
                   width: 60,
                   height: 60,
                   fit: BoxFit.cover,
