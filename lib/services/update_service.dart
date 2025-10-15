@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:markdown/markdown.dart' as md;
 import 'package:package_info_plus/package_info_plus.dart';
 
 class UpdateService {
@@ -73,6 +74,7 @@ class UpdateService {
     final version = AppVersion.tryParse(versionSource);
     final htmlUrl = (payload['html_url'] as String?)?.trim();
     final body = (payload['body'] as String?)?.trim();
+    final releaseNotesHtml = _renderReleaseNotes(body);
     final publishedAtRaw = payload['published_at'] as String?;
     final publishedAt =
         publishedAtRaw != null ? DateTime.tryParse(publishedAtRaw) : null;
@@ -83,7 +85,30 @@ class UpdateService {
       version: version,
       releaseUrl: htmlUrl ?? '',
       releaseNotes: body,
+      releaseNotesHtml: releaseNotesHtml,
       publishedAt: publishedAt,
+    );
+  }
+
+  String? _renderReleaseNotes(String? notes) {
+    if (notes == null) {
+      return null;
+    }
+
+    final trimmed = notes.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final hasHtmlTags = RegExp(r'<[a-z][\s\S]*>', caseSensitive: false)
+        .hasMatch(trimmed);
+    if (hasHtmlTags) {
+      return trimmed;
+    }
+
+    return md.markdownToHtml(
+      trimmed,
+      extensionSet: md.ExtensionSet.gitHubWeb,
     );
   }
 }
@@ -95,6 +120,7 @@ class AppUpdateInfo {
     required this.releaseUrl,
     this.version,
     this.releaseNotes,
+    this.releaseNotesHtml,
     this.publishedAt,
   });
 
@@ -103,6 +129,7 @@ class AppUpdateInfo {
   final String releaseUrl;
   final AppVersion? version;
   final String? releaseNotes;
+  final String? releaseNotesHtml;
   final DateTime? publishedAt;
 }
 

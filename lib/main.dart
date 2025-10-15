@@ -5,6 +5,7 @@ import 'package:chanolite/settings_screen.dart';
 import 'package:chanolite/widgets/global_download_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:chanolite/home_screen.dart';
+import 'package:chanolite/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -16,27 +17,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const palette = SeasonalPalette.spooky;
     return ChangeNotifierProvider(
       create: (context) => DownloadManager()..initialize(),
       child: MaterialApp(
         title: 'ChanoLite',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-          scaffoldBackgroundColor: Colors.black,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.black,
-            foregroundColor: Colors.white,
-          ),
-          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-            backgroundColor: Colors.black,
-            selectedItemColor: Colors.deepPurpleAccent,
-            unselectedItemColor: Colors.white70,
-          ),
-        ),
+        theme: AppTheme.light(palette: palette),
+        darkTheme: AppTheme.dark(palette: palette),
+        themeMode: ThemeMode.dark,
         home: const MainScreen(),
       ),
     );
@@ -68,6 +56,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Column(
         children: [
@@ -82,6 +71,9 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
+        backgroundColor: colorScheme.surface,
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: colorScheme.onSurfaceVariant,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.home),

@@ -2,6 +2,7 @@ import 'package:chanolite/services/api/article_service.dart';
 import 'package:chanolite/services/update_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'article_detail_screen.dart';
@@ -130,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final updateUrl = info.releaseUrl.isNotEmpty
         ? info.releaseUrl
         : 'https://github.com/${_updateService.owner}/${_updateService.repository}/releases/latest';
+    final releaseNotesData = info.releaseNotesHtml ?? info.releaseNotes;
 
     await showDialog<void>(
       context: context,
@@ -138,7 +140,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return AlertDialog(
           title: Text('Update available: ${info.versionLabel}'),
           content: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 280),
+            constraints: const BoxConstraints(
+              maxWidth: 420,
+              maxHeight: 360,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,12 +153,42 @@ class _HomeScreenState extends State<HomeScreen> {
                     'A newer version of ChanoLite is available on GitHub.',
                     style: theme.textTheme.bodyMedium,
                   ),
-                  if (info.releaseNotes != null && info.releaseNotes!.isNotEmpty)
+                  if (releaseNotesData != null && releaseNotesData.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        info.releaseNotes!,
-                        style: theme.textTheme.bodySmall,
+                      child: Html(
+                        data: releaseNotesData,
+                        shrinkWrap: true,
+                        style: {
+                          'body': Style(
+                            margin: Margins.zero,
+                            padding: HtmlPaddings.zero,
+                            fontSize: FontSize(
+                              theme.textTheme.bodySmall?.fontSize ?? 14,
+                            ),
+                            lineHeight: const LineHeight(1.4),
+                          ),
+                          'p': Style(margin: Margins.only(bottom: 12)),
+                          'ul': Style(
+                            margin: Margins.only(bottom: 12),
+                            padding: HtmlPaddings.only(left: 16),
+                          ),
+                          'ol': Style(
+                            margin: Margins.only(bottom: 12),
+                            padding: HtmlPaddings.only(left: 16),
+                          ),
+                          'li': Style(margin: Margins.only(bottom: 6)),
+                          'img': Style(
+                            margin: Margins.symmetric(vertical: 12),
+                            width: Width(100, Unit.percent),
+                            height: Height.auto(),
+                          ),
+                        },
+                        onLinkTap: (url, attributes, element) {
+                          if (url != null) {
+                            _openUpdateLink(url);
+                          }
+                        },
                       ),
                     ),
                 ],
