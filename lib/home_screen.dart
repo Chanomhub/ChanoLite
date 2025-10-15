@@ -1,7 +1,11 @@
 import 'package:chanolite/services/api/article_service.dart';
+import 'package:chanolite/services/update_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'models/article_model.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import 'article_detail_screen.dart';
+import 'models/article_model.dart';
 import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -13,14 +17,34 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ArticleService _articleService = ArticleService();
+  final UpdateService _updateService = UpdateService();
+  final PageController _heroPageController = PageController(
+    viewportFraction: 0.86,
+  );
+
   List<Article> _articles = [];
+  List<Article> _heroArticles = [];
+  List<_CuratedSection> _curatedSections = [];
+  List<String> _topTags = [];
+  List<String> _topPlatforms = [];
+
   bool _isLoading = true;
   String? _error;
+  bool _hasShownUpdateDialog = false;
 
   @override
   void initState() {
     super.initState();
     _loadArticles();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdates();
+    });
+  }
+
+  @override
+  void dispose() {
+    _heroPageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadArticles() async {
@@ -29,18 +53,229 @@ class _HomeScreenState extends State<HomeScreen> {
       _error = null;
     });
 
-    try {
-      final response = await _articleService.getArticles(limit: 20);
-      setState(() {
-        _articles = response.articles;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+    final attempts = <Future<void> Function()>[
+      () => _fetchAndApplyArticles(limit: 60, status: 'PUBLISHED'),
+      () => _fetchAndApplyArticles(limit: 60),
+      () => _fetchAndApplyArticles(limit: 40),
+    ];
+
+    Object? lastError;
+
+    for (final attempt in attempts) {
+      try {
+        await attempt();
+        return;
+      } catch (error, stackTrace) {
+        lastError = error;
+        debugPrint('Home load attempt failed: $error');
+        debugPrint('$stackTrace');
+      }
     }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _error = lastError?.toString() ?? 'Failed to load articles.';
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _fetchAndApplyArticles({
+    required int limit,
+    String? status,
+  }) async {
+    final response = await _articleService.getArticles(
+      limit: limit,
+      status: status,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _articles = response.articles;
+      _prepareHomeContent();
+      _isLoading = false;
+      _error = null;
+    });
+  }
+
+  Future<void> _checkForUpdates() async {
+    if (_hasShownUpdateDialog) {
+      return;
+    }
+
+    try {
+      final updateInfo = await _updateService.checkForUpdate();
+      if (!mounted || updateInfo == null) {
+        return;
+      }
+
+      _hasShownUpdateDialog = true;
+      await _showUpdateDialog(updateInfo);
+    } catch (error, stackTrace) {
+      debugPrint('Update check failed: $error');
+      debugPrint('$stackTrace');
+    }
+  }
+
+  Future<void> _showUpdateDialog(AppUpdateInfo info) async {
+    if (!mounted) {
+      return;
+    }
+
+    final updateUrl = info.releaseUrl.isNotEmpty
+        ? info.releaseUrl
+        : 'https://github.com/${_updateService.owner}/${_updateService.repository}/releases/latest';
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          title: Text('Update available: ${info.versionLabel}'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 280),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'A newer version of ChanoLite is available on GitHub.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  if (info.releaseNotes != null && info.releaseNotes!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        info.releaseNotes!,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Later'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _openUpdateLink(updateUrl);
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openUpdateLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      debugPrint('Invalid update url: $url');
+      return;
+    }
+
+    if (!await canLaunchUrl(uri)) {
+      debugPrint('Cannot launch $url');
+      return;
+    }
+
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  void _prepareHomeContent() {
+    if (_articles.isEmpty) {
+      _heroArticles = [];
+      _curatedSections = [];
+      _topTags = [];
+      _topPlatforms = [];
+      return;
+    }
+
+    final published = List<Article>.from(_articles);
+
+    final popular = List<Article>.from(published)
+      ..sort((a, b) => b.favoritesCount.compareTo(a.favoritesCount));
+    final recent = List<Article>.from(published)
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+    _heroArticles = popular.take(6).toList();
+
+    final curated = <_CuratedSection>[
+      _CuratedSection(
+        title: 'Recently updated',
+        subtitle: 'Fresh patches and new content',
+        articles: recent.take(12).toList(),
+        onSeeAll: () => _navigateToSearch(status: 'PUBLISHED'),
+      ),
+      _CuratedSection(
+        title: 'Popular picks',
+        subtitle: 'Fan favourites right now',
+        articles: popular.take(15).toList(),
+        onSeeAll: () => _navigateToSearch(status: 'PUBLISHED'),
+      ),
+    ];
+
+    final tagHighlights = _topItems((article) => article.tagList, limit: 4);
+    _topTags = tagHighlights;
+    for (final tag in tagHighlights) {
+      final tagged = published
+          .where(
+            (article) => article.tagList.any(
+              (value) => value.toLowerCase() == tag.toLowerCase(),
+            ),
+          )
+          .take(12)
+          .toList();
+      if (tagged.length < 3) continue;
+      curated.add(
+        _CuratedSection(
+          title: '#$tag spotlight',
+          subtitle: 'Hand-picked for $tag fans',
+          articles: tagged,
+          onSeeAll: () => _navigateToSearch(tag: tag),
+        ),
+      );
+    }
+
+    final platformHighlights = _topItems(
+      (article) => article.platformList,
+      limit: 3,
+    );
+    _topPlatforms = platformHighlights;
+    for (final platform in platformHighlights) {
+      final platformArticles = published
+          .where(
+            (article) => article.platformList.any(
+              (value) => value.toLowerCase() == platform.toLowerCase(),
+            ),
+          )
+          .take(12)
+          .toList();
+      if (platformArticles.length < 3) continue;
+      curated.add(
+        _CuratedSection(
+          title: '$platform essentials',
+          subtitle: 'Optimised for $platform players',
+          articles: platformArticles,
+          onSeeAll: () => _navigateToSearch(platform: platform),
+        ),
+      );
+    }
+
+    _curatedSections = curated
+        .where((section) => section.articles.isNotEmpty)
+        .toList();
   }
 
   void _navigateToSearch({
@@ -62,6 +297,15 @@ class _HomeScreenState extends State<HomeScreen> {
           initialEngine: engine,
           initialStatus: status,
         ),
+      ),
+    );
+  }
+
+  void _openArticle(Article article) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ArticleDetailScreen(article: article),
       ),
     );
   }
@@ -109,75 +353,348 @@ class _HomeScreenState extends State<HomeScreen> {
     return RefreshIndicator(
       onRefresh: _loadArticles,
       child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildQuickSearchSection(),
-            _buildFeaturedSection(),
-            _buildAllArticlesSection(),
+            _buildSearchCard(),
+            _buildTopFilters(),
+            if (_heroArticles.isNotEmpty) _buildHeroCarousel(),
+            for (final section in _curatedSections)
+              _buildHorizontalSection(section),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildQuickSearchSection() {
-    final topTags = _topItems((article) => article.tagList);
-    final topPlatforms = _topItems((article) => article.platformList);
-
+  Widget _buildSearchCard() {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: _navigateToSearch,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [
+                theme.colorScheme.primaryContainer,
+                theme.colorScheme.secondaryContainer,
+              ],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search,
+                  color: theme.colorScheme.onPrimaryContainer,
+                  size: 28,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Search the library',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Find new builds, engines, or creators',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer
+                              .withOpacity(0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopFilters() {
+    if (_topTags.isEmpty && _topPlatforms.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final chips = <Widget>[];
+
+    for (final tag in _topTags) {
+      chips.add(
+        ActionChip(
+          label: Text('#$tag'),
+          onPressed: () => _navigateToSearch(tag: tag),
+        ),
+      );
+    }
+
+    for (final platform in _topPlatforms) {
+      chips.add(
+        ActionChip(
+          label: Text(platform),
+          onPressed: () => _navigateToSearch(platform: platform),
+        ),
+      );
+    }
+
+    if (chips.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 48,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemBuilder: (context, index) => chips[index],
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemCount: chips.length,
+      ),
+    );
+  }
+
+  Widget _buildHeroCarousel() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: SizedBox(
+        height: 250,
+        child: PageView.builder(
+          controller: _heroPageController,
+          itemCount: _heroArticles.length,
+          itemBuilder: (context, index) {
+            final article = _heroArticles[index];
+            final imageUrl =
+                article.coverImage ??
+                article.mainImage ??
+                article.backgroundImage;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: GestureDetector(
+                onTap: () => _openArticle(article),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      imageUrl != null
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stack) =>
+                                  _buildImageFallback(),
+                            )
+                          : _buildImageFallback(),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.75),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 20,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              article.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              article.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHorizontalSection(_CuratedSection section) {
+    if (section.articles.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: ListTile(
-              leading: const Icon(Icons.search),
-              title: const Text('Search articles'),
-              subtitle: const Text('Find guides, downloads, and updates'),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () => _navigateToSearch(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        section.title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (section.subtitle != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            section.subtitle!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.textTheme.bodySmall?.color
+                                  ?.withOpacity(0.7),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (section.onSeeAll != null)
+                  TextButton(
+                    onPressed: section.onSeeAll,
+                    child: const Text('See all'),
+                  ),
+              ],
             ),
           ),
-          if (topTags.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('Popular tags', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: topTags
-                  .map(
-                    (tag) => ActionChip(
-                      label: Text('#$tag'),
-                      onPressed: () => _navigateToSearch(tag: tag),
-                    ),
-                  )
-                  .toList(),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 240,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (context, index) {
+                final article = section.articles[index];
+                return _buildStoreCard(article);
+              },
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemCount: section.articles.length,
             ),
-          ],
-          if (topPlatforms.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('Platforms', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: topPlatforms
-                  .map(
-                    (platform) => ActionChip(
-                      label: Text(platform),
-                      onPressed: () => _navigateToSearch(platform: platform),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStoreCard(Article article) {
+    final imageUrl =
+        article.coverImage ?? article.mainImage ?? article.backgroundImage;
+    return SizedBox(
+      width: 180,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _openArticle(article),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Theme.of(context).colorScheme.surfaceVariant,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: imageUrl != null
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stack) =>
+                              _buildImageFallback(),
+                        )
+                      : _buildImageFallback(),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      article.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      article.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.favorite, size: 14),
+                        const SizedBox(width: 4),
+                        Text('${article.favoritesCount}'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageFallback() {
+    return Container(
+      color: Colors.grey[300],
+      child: const Icon(Icons.article, color: Colors.black54),
     );
   }
 
@@ -210,181 +727,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return sortedKeys.take(limit).map((key) => displayLabels[key]!).toList();
   }
+}
 
-  Widget _buildFeaturedSection() {
-    final featuredArticles = _articles.take(5).toList();
+class _CuratedSection {
+  const _CuratedSection({
+    required this.title,
+    required this.articles,
+    this.subtitle,
+    this.onSeeAll,
+  });
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Featured',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-        ),
-        SizedBox(
-          height: 200,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: featuredArticles.length,
-            itemBuilder: (context, index) {
-              final article = featuredArticles[index];
-              final imageUrl =
-                  article.coverImage ??
-                  article.mainImage ??
-                  article.backgroundImage;
-              return SizedBox(
-                width: 150,
-                child: Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              ArticleDetailScreen(article: article),
-                        ),
-                      );
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(8),
-                          ),
-                          child: imageUrl != null
-                              ? Image.network(
-                                  imageUrl,
-                                  height: 120,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      height: 120,
-                                      color: Colors.grey[300],
-                                      child: const Icon(Icons.article),
-                                    );
-                                  },
-                                )
-                              : Container(
-                                  height: 120,
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.article),
-                                ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            article.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAllArticlesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'All Articles',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-        ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _articles.length,
-          itemBuilder: (context, index) {
-            final article = _articles[index];
-            final imageUrl =
-                article.coverImage ??
-                article.mainImage ??
-                article.backgroundImage;
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: ListTile(
-                leading: imageUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          imageUrl,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 60,
-                              height: 60,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.article),
-                            );
-                          },
-                        ),
-                      )
-                    : Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.article),
-                      ),
-                title: Text(
-                  article.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      article.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.favorite, size: 14),
-                        const SizedBox(width: 4),
-                        Text('${article.favoritesCount} favorites'),
-                      ],
-                    ),
-                  ],
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          ArticleDetailScreen(article: article),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
+  final String title;
+  final String? subtitle;
+  final List<Article> articles;
+  final VoidCallback? onSeeAll;
 }
