@@ -93,7 +93,9 @@ class GameLibraryScreen extends StatelessWidget {
         title: const Text('Game Library'),
         actions: [
           Consumer<AuthManager>(
+
             builder: (context, auth, _) {
+
               final theme = Theme.of(context);
               final user = auth.activeAccount;
               final hasAccounts = auth.accounts.isNotEmpty;
@@ -137,27 +139,14 @@ class GameLibraryScreen extends StatelessWidget {
                       }
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          avatar,
-                          const SizedBox(width: 8),
-                          Text(
-                            user?.username ?? 'Sign in',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Icon(Icons.arrow_drop_down),
-                        ],
-                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: avatar,
                     ),
                   ),
                 ),
               );
             },
+
           ),
         ],
       ),

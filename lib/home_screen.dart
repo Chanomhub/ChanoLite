@@ -59,9 +59,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     final attempts = <Future<void> Function()>[
-      () => _fetchAndApplyArticles(limit: 60, status: 'PUBLISHED'),
-      () => _fetchAndApplyArticles(limit: 60),
-      () => _fetchAndApplyArticles(limit: 40),
+          () => _fetchAndApplyArticles(limit: 60, status: 'PUBLISHED'),
+          () => _fetchAndApplyArticles(limit: 60),
+          () => _fetchAndApplyArticles(limit: 40),
     ];
 
     Object? lastError;
@@ -272,8 +272,8 @@ class _HomeScreenState extends State<HomeScreen> {
           .where(
             (article) => article.tagList.any(
               (value) => value.toLowerCase() == tag.toLowerCase(),
-            ),
-          )
+        ),
+      )
           .take(12)
           .toList();
       if (tagged.length < 3) continue;
@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final platformHighlights = _topItems(
-      (article) => article.platformList,
+          (article) => article.platformList,
       limit: 3,
     );
     _topPlatforms = platformHighlights;
@@ -297,8 +297,8 @@ class _HomeScreenState extends State<HomeScreen> {
           .where(
             (article) => article.platformList.any(
               (value) => value.toLowerCase() == platform.toLowerCase(),
-            ),
-          )
+        ),
+      )
           .take(12)
           .toList();
       if (platformArticles.length < 3) continue;
@@ -353,7 +353,42 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ChanoLite - Home'),
+        title: Row(
+          children: [
+            const Text('ChanoLite - Home'),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade700,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '🎃',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Halloween 2025',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    '👻',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           Consumer<AuthManager>(
             builder: (context, auth, _) {
@@ -576,8 +611,8 @@ class _HomeScreenState extends State<HomeScreen> {
             final article = _heroArticles[index];
             final imageUrl =
                 article.coverImage ??
-                article.mainImage ??
-                article.backgroundImage;
+                    article.mainImage ??
+                    article.backgroundImage;
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: GestureDetector(
@@ -589,11 +624,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       imageUrl != null
                           ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stack) =>
-                                  _buildImageFallback(),
-                            )
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stack) =>
+                            _buildImageFallback(),
+                      )
                           : _buildImageFallback(),
                       Container(
                         decoration: BoxDecoration(
@@ -736,11 +771,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   aspectRatio: 16 / 9,
                   child: imageUrl != null
                       ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stack) =>
-                              _buildImageFallback(),
-                        )
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stack) =>
+                        _buildImageFallback(),
+                  )
                       : _buildImageFallback(),
                 ),
               ),
@@ -790,9 +825,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<String> _topItems(
-    List<String> Function(Article) extractor, {
-    int limit = 6,
-  }) {
+      List<String> Function(Article) extractor, {
+        int limit = 6,
+      }) {
     final Map<String, int> counts = {};
     final Map<String, String> displayLabels = {};
 

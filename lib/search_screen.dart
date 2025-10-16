@@ -483,9 +483,35 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         title: const Text('ChanoLite - Search'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _loadArticles(reset: true),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade700,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '🎃',
+                  style: TextStyle(fontSize: 16),
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'Halloween 2025',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Text(
+                  '👻',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
           ),
         ],
       ),
