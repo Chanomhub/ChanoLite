@@ -12,6 +12,7 @@ on:
       flutter_channel:
         description: "Flutter channel (stable, beta, master)"
         required: false
+        default: "beta"
 
 jobs:
   build-and-upload:
@@ -24,8 +25,8 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: ${{ github.event.inputs.flutter_channel || 'stable' }}
-          flutter-version: '3.24.3'
+          channel: ${{ github.event.inputs.flutter_channel }}
+          flutter-version: '3.22.2'
           architecture: x64
 
       - name: Install dependencies
