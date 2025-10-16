@@ -9,6 +9,12 @@ on:
       flavor:
         description: "Optional Flutter flavor name"
         required: false
+      flutter_channel:
+        description: "Flutter channel (stable, beta, master)"
+        required: false
+      flutter_version:
+        description: "Specific Flutter version (leave blank for latest on channel)"
+        required: false
 
 jobs:
   build-and-upload:
@@ -21,7 +27,8 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.3"
+          channel: ${{ github.event.inputs.flutter_channel || 'beta' }}
+          flutter-version: ${{ github.event.inputs.flutter_version || 'latest' }}
 
       - name: Install dependencies
         run: flutter pub get
