@@ -1,9 +1,12 @@
 
+import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/models/download_task.dart';
+import 'package:chanolite/screens/account_switcher_sheet.dart';
+import 'package:chanolite/screens/login_screen.dart';
+import 'package:chanolite/services/file_opener_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:chanolite/services/file_opener_service.dart';
 
 class GameLibraryScreen extends StatelessWidget {
   const GameLibraryScreen({super.key});
@@ -88,6 +91,75 @@ class GameLibraryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Game Library'),
+        actions: [
+          Consumer<AuthManager>(
+            builder: (context, auth, _) {
+              final theme = Theme.of(context);
+              final user = auth.activeAccount;
+              final hasAccounts = auth.accounts.isNotEmpty;
+              final imageUrl = user?.image ?? '';
+              final avatar = imageUrl.isNotEmpty
+                  ? CircleAvatar(
+                      radius: 16,
+                      backgroundImage: NetworkImage(imageUrl),
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                    )
+                  : CircleAvatar(
+                      radius: 16,
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      foregroundColor: theme.colorScheme.onPrimaryContainer,
+                      child: Text(
+                        user?.username.isNotEmpty == true
+                            ? user!.username[0].toUpperCase()
+                            : '+',
+                      ),
+                    );
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: () {
+                      if (hasAccounts) {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (_) => const AccountSwitcherSheet(),
+                        );
+                      } else {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                        );
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          avatar,
+                          const SizedBox(width: 8),
+                          Text(
+                            user?.username ?? 'Sign in',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Icon(Icons.arrow_drop_down),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<DownloadManager>(
         builder: (context, downloadManager, child) {

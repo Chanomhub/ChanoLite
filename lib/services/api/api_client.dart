@@ -4,10 +4,15 @@ import 'package:http/http.dart' as http;
 
 class ApiClient {
   static const String baseUrl = 'https://api.chanomhub.online/api';
+  static String? _authToken;
   final http.Client _httpClient;
 
   ApiClient({http.Client? httpClient})
       : _httpClient = httpClient ?? http.Client();
+
+  static void updateAuthToken(String? token) {
+    _authToken = token;
+  }
 
   Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
     final uri = Uri.parse('$baseUrl/$endpoint');
@@ -39,11 +44,13 @@ class ApiClient {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
+    final token = _authToken;
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
     if (additionalHeaders != null) {
       headers.addAll(additionalHeaders);
     }
-    // Add authentication headers if needed
-    // e.g., headers['Authorization'] = 'Bearer $token';
     return headers;
   }
 

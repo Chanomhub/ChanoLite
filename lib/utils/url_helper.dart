@@ -1,6 +1,7 @@
 
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class InAppBrowserHelper extends InAppBrowser {
   final DownloadManager downloadManager;
@@ -10,12 +11,6 @@ class InAppBrowserHelper extends InAppBrowser {
   // A basic list of ad-related domains to block.
   static final List<String> _adBlockDomains = [
     '.doubleclick.net',
-    '.googleadservices.com',
-    '.googlesyndication.com',
-    '.moat.com',
-    '.admob.com',
-    '.adservice.google.com',
-    '.sourshaped.com',
     // Add more domains as needed
   ];
 
@@ -84,6 +79,7 @@ class InAppBrowserHelper extends InAppBrowser {
           crossPlatform: InAppWebViewOptions(
             contentBlockers: _contentBlockers,
             useOnDownloadStart: true, // This is crucial
+            useShouldOverrideUrlLoading: true,
           ),
         ),
       ),
@@ -100,5 +96,93 @@ class InAppBrowserHelper extends InAppBrowser {
       downloadStartRequest.url.toString(),
       suggestedFilename: fileName,
     );
+  }
+
+  @override
+  Future<NavigationActionPolicy> shouldOverrideUrlLoading(NavigationAction navigationAction) async {
+    final webUri = navigationAction.request.url;
+    if (webUri == null) {
+      return NavigationActionPolicy.ALLOW;
+    }
+
+    final scheme = webUri.scheme?.toLowerCase() ?? '';
+    if (scheme == 'http' || scheme == 'https') {
+      return NavigationActionPolicy.ALLOW;
+    }
+
+    if (scheme == 'intent') {
+      final resolved = _resolveIntentUrl(webUri.toString());
+      if (resolved != null) {
+        if (resolved.scheme == 'http' || resolved.scheme == 'https') {
+          await webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri(resolved.toString())));
+        } else {
+          await _launchExternal(resolved);
+        }
+      }
+      return NavigationActionPolicy.CANCEL;
+    }
+
+    final externalUri = Uri.tryParse(webUri.toString());
+    if (externalUri != null) {
+      await _launchExternal(externalUri);
+    }
+    return NavigationActionPolicy.CANCEL;
+  }
+
+  Future<void> _launchExternal(Uri uri) async {
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Uri? _resolveIntentUrl(String intentUrl) {
+    const prefix = 'intent://';
+    if (!intentUrl.startsWith(prefix)) {
+      return null;
+    }
+
+    final intentIndex = intentUrl.indexOf('#Intent;');
+    final basePart = intentIndex == -1
+        ? intentUrl.substring(prefix.length)
+        : intentUrl.substring(prefix.length, intentIndex);
+    final paramsPart = intentIndex == -1
+        ? ''
+        : intentUrl.substring(intentIndex + '#Intent;'.length);
+
+    final fallback = _extractIntentString(paramsPart, 'browser_fallback_url');
+    if (fallback != null) {
+      final uri = Uri.tryParse(fallback);
+      if (uri != null) {
+        return uri;
+      }
+    }
+
+    final scheme = _extractIntentParam(paramsPart, 'scheme');
+    if (scheme == null) {
+      return null;
+    }
+
+    return Uri.tryParse('$scheme://$basePart');
+  }
+
+  String? _extractIntentParam(String paramsPart, String key) {
+    final parts = paramsPart.split(';');
+    for (final part in parts) {
+      if (part.startsWith('$key=')) {
+        return part.substring(key.length + 1);
+      }
+    }
+    return null;
+  }
+
+  String? _extractIntentString(String paramsPart, String key) {
+    final prefix = 'S.$key=';
+    final parts = paramsPart.split(';');
+    for (final part in parts) {
+      if (part.startsWith(prefix)) {
+        return Uri.decodeComponent(part.substring(prefix.length));
+      }
+    }
+    return null;
   }
 }

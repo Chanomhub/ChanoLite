@@ -40,6 +40,47 @@ class User {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'roles': roles,
+      'email': email,
+      'username': username,
+      'bio': bio,
+      'image': image,
+      'backgroundImage': backgroundImage,
+      'points': points,
+      'shrtflyApiKey': shrtflyApiKey,
+      'token': token,
+      'socialMediaLinks': socialMediaLinks.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  User copyWith({
+    List<String>? roles,
+    String? email,
+    String? username,
+    String? bio,
+    String? image,
+    String? backgroundImage,
+    int? points,
+    String? shrtflyApiKey,
+    String? token,
+    List<SocialMediaLink>? socialMediaLinks,
+  }) {
+    return User(
+      roles: roles ?? this.roles,
+      email: email ?? this.email,
+      username: username ?? this.username,
+      bio: bio ?? this.bio,
+      image: image ?? this.image,
+      backgroundImage: backgroundImage ?? this.backgroundImage,
+      points: points ?? this.points,
+      shrtflyApiKey: shrtflyApiKey ?? this.shrtflyApiKey,
+      token: token ?? this.token,
+      socialMediaLinks: socialMediaLinks ?? this.socialMediaLinks,
+    );
+  }
 }
 
 class Profile {
@@ -84,6 +125,13 @@ class SocialMediaLink {
       platform: json['platform'],
       url: json['url'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'platform': platform,
+      'url': url,
+    };
   }
 }
 

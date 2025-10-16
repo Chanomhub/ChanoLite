@@ -1,11 +1,13 @@
 import 'package:chanolite/game_library_screen.dart';
+import 'package:chanolite/home_screen.dart';
+import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
+import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/search_screen.dart';
 import 'package:chanolite/settings_screen.dart';
+import 'package:chanolite/theme/app_theme.dart';
 import 'package:chanolite/widgets/global_download_indicator.dart';
 import 'package:flutter/material.dart';
-import 'package:chanolite/home_screen.dart';
-import 'package:chanolite/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -18,14 +20,20 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const palette = SeasonalPalette.spooky;
-    return ChangeNotifierProvider(
-      create: (context) => DownloadManager()..initialize(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => DownloadManager()..initialize()),
+        ChangeNotifierProvider(create: (_) => AuthManager()..load()),
+      ],
       child: MaterialApp(
         title: 'ChanoLite',
         theme: AppTheme.light(palette: palette),
         darkTheme: AppTheme.dark(palette: palette),
         themeMode: ThemeMode.dark,
-        home: const MainScreen(),
+        home: const AuthGate(),
+        routes: {
+          '/login': (_) => const LoginScreen(),
+        },
       ),
     );
   }
@@ -95,6 +103,30 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthManager>(
+      builder: (context, auth, child) {
+        if (auth.isLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!auth.isAuthenticated) {
+          return const LoginScreen();
+        }
+
+        return child!;
+      },
+      child: const MainScreen(),
     );
   }
 }
