@@ -8,10 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
 class DownloadManager extends ChangeNotifier {
   final Dio _dio = Dio();
   final List<DownloadTask> _tasks = [];
+  static const MethodChannel _platformChannel = MethodChannel(
+    'com.chanomhub.chanolite/download_notifications',
+  );
 
   static const String downloadPathKey = 'download_path';
   static const String downloadTasksKey = 'download_tasks';
@@ -100,6 +104,8 @@ class DownloadManager extends ChangeNotifier {
     )
         ? DownloadType.archive
         : DownloadType.file;
+
+    unawaited(_notifyDownloadStarted(fileName));
 
     try {
       _updateTask(
@@ -204,6 +210,17 @@ class DownloadManager extends ChangeNotifier {
 
   void _schedulePersist() {
     unawaited(_persistTasks());
+  }
+
+  Future<void> _notifyDownloadStarted(String fileName) async {
+    try {
+      await _platformChannel.invokeMethod(
+        'notifyDownloadStarted',
+        <String, dynamic>{'fileName': fileName},
+      );
+    } catch (_) {
+      // Ignore errors from the native notification layer.
+    }
   }
 
   Future<void> _persistTasks() async {
