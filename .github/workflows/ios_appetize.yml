@@ -12,7 +12,7 @@ on:
       flutter_channel:
         description: "Flutter channel (stable, beta, master)"
         required: false
-        default: "beta"
+        default: "stable"
 
 jobs:
   build-and-upload:
@@ -26,8 +26,6 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ github.event.inputs.flutter_channel }}
-          flutter-version: '3.22.2'
-          architecture: x64
 
       - name: Install dependencies
         run: flutter pub get
