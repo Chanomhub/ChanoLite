@@ -1,0 +1,78 @@
+name: iOS Appetize Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      appetize_app_id:
+        description: "Existing Appetize app ID (leave blank to create new app)"
+        required: false
+      flavor:
+        description: "Optional Flutter flavor name"
+        required: false
+
+jobs:
+  build-and-upload:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.3"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build iOS simulator app
+        env:
+          FLUTTER_FLAVOR: ${{ github.event.inputs.flavor }}
+        run: |
+          if [ -n "$FLUTTER_FLAVOR" ]; then
+            flutter build ios --simulator --flavor "$FLUTTER_FLAVOR" --no-codesign
+          else
+            flutter build ios --simulator --no-codesign
+          fi
+
+      - name: Prepare archive
+        run: |
+          BUILD_DIR="build/ios/iphonesimulator"
+          APP_PATH=$(find "$BUILD_DIR" -name "*.app" -maxdepth 1 -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "iOS simulator app not found" >&2
+            exit 1
+          fi
+          tar -czf appetize-app.tar.gz -C "$(dirname "$APP_PATH")" "$(basename "$APP_PATH")"
+
+      - name: Upload to Appetize
+        env:
+          APPETIZE_API_TOKEN: ${{ secrets.APPETIZE_API_TOKEN }}
+          INPUT_APP_ID: ${{ github.event.inputs.appetize_app_id }}
+        run: |
+          if [ -z "$APPETIZE_API_TOKEN" ]; then
+            echo "APPETIZE_API_TOKEN secret is not set" >&2
+            exit 1
+          fi
+
+          API_URL="https://api.appetize.io/v1/apps"
+          if [ -n "$INPUT_APP_ID" ]; then
+            API_URL="$API_URL/$INPUT_APP_ID"
+          fi
+
+          RESPONSE=$(curl -sS -X POST "$API_URL" \
+            -H "Authorization: Bearer $APPETIZE_API_TOKEN" \
+            -F "platform=ios" \
+            -F "app=@appetize-app.tar.gz" )
+
+          echo "Appetize response: $RESPONSE"
+          URL=$(echo "$RESPONSE" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('publicURL') or data.get('app','{}').get('publicURL',''))")
+          if [ -z "$URL" ]; then
+            echo "Failed to extract publicURL from Appetize response" >&2
+            exit 1
+          fi
+          echo "Appetize Launch URL: $URL"
