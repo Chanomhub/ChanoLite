@@ -4,6 +4,9 @@
         android:label="chanolite"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
+        <meta-data
+            android:name="applovin.sdk.key"
+            android:value="YOUR_APPLOVIN_SDK_KEY" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

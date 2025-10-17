@@ -1,3 +1,4 @@
+import 'package:applovin_max/applovin_max.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';
@@ -26,6 +27,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _heroPageController = PageController(
     viewportFraction: 0.86,
   );
+  static const String _sdkKey = 'YOUR_APPLOVIN_SDK_KEY';
+  static const String _bannerAdUnitId = 'YOUR_BANNER_AD_UNIT_ID';
+  bool _isMaxInitialized = false;
 
   List<Article> _articles = [];
   List<Article> _heroArticles = [];
@@ -40,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeAppLovin();
     _loadArticles();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForUpdates();
@@ -48,8 +53,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    AppLovinMAX.destroyBanner(_bannerAdUnitId);
     _heroPageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeAppLovin() async {
+    final configuration = await AppLovinMAX.initialize(_sdkKey);
+    if (configuration == null) {
+      return;
+    }
+
+    setState(() {
+      _isMaxInitialized = true;
+    });
+
+    AppLovinMAX.loadBanner(_bannerAdUnitId);
   }
 
   Future<void> _loadArticles() async {

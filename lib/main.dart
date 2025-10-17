@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:chanolite/game_library_screen.dart';
 import 'package:chanolite/home_screen.dart';
+import 'package:chanolite/managers/ad_manager.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/screens/login_screen.dart';
@@ -11,11 +14,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  final adManager = AdManager(
+    configProvider: () async => const AdManagerConfig(
+      sdkKey: 'YOUR_APPLOVIN_SDK_KEY',
+      bannerAdUnitId: 'YOUR_BANNER_AD_UNIT_ID',
+    ),
+  );
+  unawaited(adManager.initialize());
+  runApp(MyApp(adManager: adManager));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.adManager});
+
+  final AdManager adManager;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +38,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => DownloadManager()),
         ChangeNotifierProvider.value(value: authManager),
+        Provider<AdManager>.value(value: adManager),
       ],
       child: MaterialApp(
         title: 'ChanoLite',
