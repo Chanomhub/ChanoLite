@@ -1,3 +1,4 @@
+import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/models/download_model.dart';
 import 'package:chanolite/services/api/download_service.dart';
@@ -164,7 +165,12 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                     icon: const Icon(Icons.download),
                     onPressed: () {
                       final downloadManager = Provider.of<DownloadManager>(context, listen: false);
-                      InAppBrowserHelper.openUrl(link.url, downloadManager: downloadManager);
+                      final authToken = Provider.of<AuthManager>(context, listen: false).activeAccount?.token;
+                      InAppBrowserHelper.openUrl(
+                        link.url,
+                        downloadManager: downloadManager,
+                        authToken: authToken,
+                      );
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

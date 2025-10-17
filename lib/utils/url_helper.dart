@@ -5,8 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 class InAppBrowserHelper extends InAppBrowser {
   final DownloadManager downloadManager;
+  final String? authToken;
 
-  InAppBrowserHelper({required this.downloadManager});
+  InAppBrowserHelper({required this.downloadManager, this.authToken});
 
   // A basic list of ad-related domains to block.
   static final List<String> _adBlockDomains = [
@@ -66,9 +67,24 @@ class InAppBrowserHelper extends InAppBrowser {
 
   static Future<void> openUrl(
     String url,
-    {required DownloadManager downloadManager}
+    {required DownloadManager downloadManager, String? authToken}
   ) async {
-    final InAppBrowserHelper browser = InAppBrowserHelper(downloadManager: downloadManager);
+    final uri = Uri.tryParse(url);
+    if (authToken != null && authToken.isNotEmpty && uri != null && uri.hasAuthority) {
+      await CookieManager.instance().setCookie(
+        url: WebUri('${uri.scheme}://${uri.host}'),
+        name: 'token',
+        value: authToken,
+        path: '/',
+        isHttpOnly: true,
+        sameSite: HTTPCookieSameSitePolicy.LAX,
+      );
+    }
+
+    final InAppBrowserHelper browser = InAppBrowserHelper(
+      downloadManager: downloadManager,
+      authToken: authToken,
+    );
     await browser.openUrlRequest(
       urlRequest: URLRequest(url: WebUri(url)),
       options: InAppBrowserClassOptions(
@@ -95,6 +111,7 @@ class InAppBrowserHelper extends InAppBrowser {
     await downloadManager.startDownload(
       downloadStartRequest.url.toString(),
       suggestedFilename: fileName,
+      authToken: authToken,
     );
   }
 

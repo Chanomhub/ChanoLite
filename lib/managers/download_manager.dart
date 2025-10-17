@@ -71,7 +71,11 @@ class DownloadManager extends ChangeNotifier {
     await _persistTasks();
   }
 
-  Future<void> startDownload(String url, {String? suggestedFilename}) async {
+  Future<void> startDownload(
+    String url, {
+    String? suggestedFilename,
+    String? authToken,
+  }) async {
     if (_tasks.any((task) =>
         task.url == url &&
         (task.status == DownloadTaskStatus.running ||
@@ -119,6 +123,11 @@ class DownloadManager extends ChangeNotifier {
       await _dio.download(
         url,
         filePath,
+        options: Options(
+          headers: authToken != null && authToken.isNotEmpty
+              ? {'Cookie': 'token=$authToken'}
+              : null,
+        ),
         onReceiveProgress: (received, total) {
           if (total != -1) {
             final progress = received / total;

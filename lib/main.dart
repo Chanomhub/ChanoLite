@@ -20,10 +20,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const palette = SeasonalPalette.spooky;
+    final authManager = AuthManager()
+      ..load();
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => DownloadManager()..initialize()),
-        ChangeNotifierProvider(create: (_) => AuthManager()..load()),
+        ChangeNotifierProvider(create: (_) => DownloadManager()),
+        ChangeNotifierProvider.value(value: authManager),
       ],
       child: MaterialApp(
         title: 'ChanoLite',
