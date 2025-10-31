@@ -39,6 +39,16 @@ class ApiClient {
     return _handleResponse(response);
   }
 
+  Future<dynamic> query(String query, {Map<String, dynamic>? variables}) async {
+        final uri = Uri.parse('https://api.chanomhub.online/api/graphql');
+    final body = {
+      'query': query,
+      'variables': variables,
+    };
+    final response = await _httpClient.post(uri, headers: _buildHeaders(null), body: json.encode(body));
+    return _handleResponse(response);
+  }
+
   Map<String, String> _buildHeaders(Map<String, String>? additionalHeaders) {
     final headers = {
       'Content-Type': 'application/json',

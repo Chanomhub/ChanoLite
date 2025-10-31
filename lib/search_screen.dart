@@ -62,7 +62,7 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _filterEngineController = TextEditingController();
 
   List<Article> _articles = [];
-  int _articlesCount = 0;
+  int? _articlesCount;
   int _offset = 0;
   final int _limit = 20;
   bool _isLoading = true;
@@ -141,7 +141,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoading = true;
         _error = null;
         _articles = [];
-        _articlesCount = 0;
+        _articlesCount = null;
         _offset = 0;
         _hasMore = false;
       });
@@ -181,7 +181,11 @@ class _SearchScreenState extends State<SearchScreen> {
         _articlesCount = response.articlesCount;
         final fetched = response.articles.length;
         _offset = reset ? fetched : _offset + fetched;
-        _hasMore = _articles.length < _articlesCount;
+        if (_articlesCount != null) {
+          _hasMore = _articles.length < _articlesCount!;
+        } else {
+          _hasMore = fetched == _limit;
+        }
         _isLoading = false;
         _isLoadingMore = false;
       });
@@ -466,7 +470,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildResultSummary() {
-    if (_isLoading || _error != null) {
+    if (_isLoading || _error != null || _articlesCount == null) {
       return const SizedBox.shrink();
     }
     return Padding(

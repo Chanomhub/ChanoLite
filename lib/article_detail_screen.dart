@@ -1,7 +1,7 @@
+import 'package:chanolite/game_library_screen.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
-import 'package:chanolite/models/download_model.dart';
-import 'package:chanolite/services/api/download_service.dart';
+import 'package:chanolite/services/api/article_service.dart';
 import 'package:chanolite/utils/url_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -19,34 +19,70 @@ class ArticleDetailScreen extends StatefulWidget {
 }
 
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
-  final DownloadService _downloadService = DownloadService();
-  List<DownloadLinkDTO> _downloadLinks = [];
-  bool _isLoadingLinks = true;
-  String? _linksError;
+  Article? _article;
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadDownloadLinks();
+    print('Initializing ArticleDetailScreen for article: ${widget.article.slug}');
+    _loadArticle();
   }
 
-  Future<void> _loadDownloadLinks() async {
+  Future<void> _loadArticle() async {
     try {
-      final links = await _downloadService.getDownloadLinks(widget.article.id);
-      setState(() {
-        _downloadLinks = links;
-        _isLoadingLinks = false;
-      });
-    } catch (e) {
-      setState(() {
-        _linksError = e.toString();
-        _isLoadingLinks = false;
-      });
+      Article article;
+      if (widget.article.slug != null && widget.article.slug!.isNotEmpty) {
+        article = await ArticleService().getArticleBySlug(widget.article.slug);
+      } else {
+        article = await ArticleService().getArticleById(widget.article.id);
+      }
+
+      if (mounted) {
+        setState(() {
+          _article = article;
+          _isLoading = false;
+        });
+        print('Article loaded successfully: ${_article?.title}');
+      }
+    } catch (e, stackTrace) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+        print('Error loading article: $e');
+        print(stackTrace);
+      }
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
+    print('Building ArticleDetailScreen: isLoading: $_isLoading, error: $_error, article: ${_article?.title}');
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.article.title)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.article.title)),
+        body: Center(child: Text('Error: $_error')),
+      );
+    }
+
+    if (_article == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.article.title)),
+        body: const Center(child: Text('Article not found.')),
+      );
+    }
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -63,13 +99,13 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   const SizedBox(height: 16),
                   Text('Description', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
-                  Text(widget.article.description, style: Theme.of(context).textTheme.bodyMedium),
+                  Text(_article!.description ?? '', style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 16),
                   _buildDownloadSection(context),
                   const SizedBox(height: 16),
                   Text('Body', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
-                  Html(data: widget.article.body),
+                  Html(data: _article!.body ?? ''),
                   const SizedBox(height: 16),
                   _buildImageGallery(context),
                   const SizedBox(height: 16),
@@ -89,12 +125,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       floating: false,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
-        title: Text(widget.article.title, style: const TextStyle(fontSize: 16.0)),
-        background: Image.network(
-          widget.article.coverImage ?? '',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.image),
-        ),
+        title: Text(_article!.title, style: const TextStyle(fontSize: 16.0)),
+        background: _article!.coverImage != null
+            ? Image.network(
+                _article!.coverImage!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.image),
+              )
+            : const Icon(Icons.image),
       ),
     );
   }
@@ -103,37 +141,60 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     return Row(
       children: [
         CircleAvatar(
-          backgroundImage: NetworkImage(widget.article.author.image ?? ''),
+          backgroundImage: _article!.author.image != null ? NetworkImage(_article!.author.image!) : null,
           onBackgroundImageError: (exception, stackTrace) {},
-          child: widget.article.author.image == null ? const Icon(Icons.person) : null,
+          child: _article!.author.image == null ? const Icon(Icons.person) : null,
         ),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.article.author.username, style: Theme.of(context).textTheme.titleMedium),
-            Text(DateFormat.yMMMd().format(widget.article.createdAt), style: Theme.of(context).textTheme.bodySmall),
+            Text(_article!.author.name, style: Theme.of(context).textTheme.titleMedium),
+            Text(DateFormat.yMMMd().format(_article!.createdAt), style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
         const Spacer(),
         IconButton(
-          icon: Icon(widget.article.favorited ? Icons.favorite : Icons.favorite_border),
-          color: widget.article.favorited ? Colors.red : null,
+          icon: Icon(_article!.favorited ? Icons.favorite : Icons.favorite_border),
+          color: _article!.favorited ? Colors.red : null,
           onPressed: () { /* Handle favorite */ },
         ),
-        Text(widget.article.favoritesCount.toString()),
+        Text(_article!.favoritesCount.toString()),
       ],
     );
   }
 
   Widget _buildTags(BuildContext context) {
+    final theme = Theme.of(context);
+    Color getColor(String text) {
+      // Simple hash to get a color from a predefined list
+      final colors = [
+        Colors.blue, Colors.green, Colors.red, Colors.orange, Colors.purple,
+        Colors.teal, Colors.pink, Colors.indigo, Colors.cyan, Colors.brown,
+      ];
+      return colors[text.hashCode % colors.length];
+    }
+
+    Widget buildChip(String label, Color color) {
+      final isDark = theme.brightness == Brightness.dark;
+      final backgroundColor = isDark ? color.withOpacity(0.3) : color.withOpacity(0.15);
+      final labelColor = isDark ? color.withOpacity(0.9) : color;
+
+      return Chip(
+        label: Text(label),
+        backgroundColor: backgroundColor,
+        labelStyle: TextStyle(color: labelColor, fontWeight: FontWeight.w500),
+        side: BorderSide.none,
+      );
+    }
+
     return Wrap(
       spacing: 8.0,
       runSpacing: 4.0,
       children: [
-        ...widget.article.tagList.map((tag) => Chip(label: Text(tag))),
-        ...widget.article.categoryList.map((category) => Chip(label: Text(category), backgroundColor: Colors.blue.shade100)),
-        ...widget.article.platformList.map((platform) => Chip(label: Text(platform), backgroundColor: Colors.green.shade100)),
+        ..._article!.tagList.map((tag) => Chip(label: Text(tag))),
+        ..._article!.categoryList.map((category) => buildChip(category, getColor(category))),
+        ..._article!.platformList.map((platform) => buildChip(platform, getColor(platform))),
       ],
     );
   }
@@ -144,19 +205,15 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       children: [
         Text('Downloads', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        if (_isLoadingLinks)
-          const Center(child: CircularProgressIndicator())
-        else if (_linksError != null)
-          Center(child: Text('Error loading links: $_linksError'))
-        else if (_downloadLinks.isEmpty)
+        if (_article!.downloads.isEmpty)
           const Center(child: Text('No download links available.'))
         else
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _downloadLinks.length,
+            itemCount: _article!.downloads.length,
             itemBuilder: (context, index) {
-              final link = _downloadLinks[index];
+              final link = _article!.downloads[index];
               return Card(
                 child: ListTile(
                   title: Text(link.name),
@@ -178,16 +235,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                           action: SnackBarAction(
                             label: 'GO TO LIBRARY',
                             onPressed: () {
-                              // This assumes MainScreen is managing the BottomNavBar index.
-                              // A more robust solution might use a global key or a different state management approach for navigation.
-                              // For now, this is a simple way to request a tab change.
-                              // Note: This won't work if the user navigates away from MainScreen.
-                              // A better way is to have a dedicated navigator for each tab.
-                              // But for this case, we will just pop until we reach the root.
-                              Navigator.of(context).popUntil((route) => route.isFirst);
-                              // Then we need to tell the MainScreen to switch tabs. This is the tricky part.
-                              // A simple approach is to not do anything and let the user tap the library tab.
-                              // The SnackBar is just a notification.
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const GameLibraryScreen(),
+                                ),
+                              );
                             },
                           ),
                         ),
@@ -207,11 +259,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: widget.article.images.length,
+        itemCount: _article!.images.length,
         itemBuilder: (context, index) {
           return Card(
             child: Image.network(
-              widget.article.images[index],
+              _article!.images[index],
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => const Icon(Icons.image),
             ),
@@ -233,13 +285,13 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             1: FlexColumnWidth(),
           },
           children: [
-            _buildInfoTableRow('ID', widget.article.id.toString()),
-            _buildInfoTableRow('Sequential Code', widget.article.sequentialCode ?? 'N/A'),
-            _buildInfoTableRow('Engine', widget.article.engine ?? 'N/A'),
-            _buildInfoTableRow('Version', widget.article.version?.toString() ?? 'N/A'),
-            _buildInfoTableRow('Status', widget.article.status),
-            _buildInfoTableRow('Created At', DateFormat.yMMMd().format(widget.article.createdAt)),
-            _buildInfoTableRow('Updated At', DateFormat.yMMMd().format(widget.article.updatedAt)),
+            _buildInfoTableRow('ID', _article!.id.toString()),
+            _buildInfoTableRow('Sequential Code', _article!.sequentialCode ?? 'N/A'),
+            _buildInfoTableRow('Engine', _article!.engine ?? 'N/A'),
+            _buildInfoTableRow('Version', _article!.version?.toString() ?? 'N/A'),
+            _buildInfoTableRow('Status', _article!.status ?? 'N/A'),
+            _buildInfoTableRow('Created At', DateFormat.yMMMd().format(_article!.createdAt)),
+            _buildInfoTableRow('Updated At', DateFormat.yMMMd().format(_article!.updatedAt)),
           ],
         ),
       ],

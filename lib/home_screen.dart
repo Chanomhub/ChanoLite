@@ -6,6 +6,7 @@ import 'package:chanolite/services/api/article_service.dart';
 import 'package:chanolite/services/update_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -29,8 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
   );
   static const String _sdkKey = 'YOUR_APPLOVIN_SDK_KEY';
   static const String _bannerAdUnitId = 'YOUR_BANNER_AD_UNIT_ID';
-  bool _isMaxInitialized = false;
-
   List<Article> _articles = [];
   List<Article> _heroArticles = [];
   List<_CuratedSection> _curatedSections = [];
@@ -53,22 +52,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    AppLovinMAX.destroyBanner(_bannerAdUnitId);
+    try {
+      AppLovinMAX.destroyBanner(_bannerAdUnitId);
+    } on MissingPluginException catch (error) {
+      debugPrint('AppLovin destroy failed: $error');
+    }
     _heroPageController.dispose();
     super.dispose();
   }
 
   Future<void> _initializeAppLovin() async {
-    final configuration = await AppLovinMAX.initialize(_sdkKey);
-    if (configuration == null) {
-      return;
+    try {
+      final configuration = await AppLovinMAX.initialize(_sdkKey);
+      if (configuration == null) {
+        return;
+      }
+      AppLovinMAX.loadBanner(_bannerAdUnitId);
+    } on MissingPluginException catch (error) {
+      debugPrint('AppLovin initialize failed: $error');
+    } catch (error, stackTrace) {
+      debugPrint('AppLovin initialize error: $error');
+      debugPrint('$stackTrace');
     }
-
-    setState(() {
-      _isMaxInitialized = true;
-    });
-
-    AppLovinMAX.loadBanner(_bannerAdUnitId);
   }
 
   Future<void> _loadArticles() async {
@@ -374,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            const Text('ChanoLite - Home'),
+                        Flexible(child: const Text('ChanoLite - Home')),
             const SizedBox(width: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -766,76 +771,77 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStoreCard(Article article) {
-    final imageUrl =
-        article.coverImage ?? article.mainImage ?? article.backgroundImage;
-    return SizedBox(
-      width: 180,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _openArticle(article),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: Theme.of(context).colorScheme.surfaceVariant,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
+    Widget _buildStoreCard(Article article) {
+      final imageUrl =
+          article.coverImage ?? article.mainImage ?? article.backgroundImage;
+      return SizedBox(
+        width: 180,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _openArticle(article),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Theme.of(context).colorScheme.surfaceVariant,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: imageUrl != null
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stack) =>
+                                _buildImageFallback(),
+                          )
+                        : _buildImageFallback(),
+                  ),
                 ),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: imageUrl != null
-                      ? Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stack) =>
-                        _buildImageFallback(),
-                  )
-                      : _buildImageFallback(),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      article.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      article.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.favorite, size: 14),
-                        const SizedBox(width: 4),
-                        Text('${article.favoritesCount}'),
+                        Text(
+                          article.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          article.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.favorite, size: 14),
+                            const SizedBox(width: 4),
+                            Text('${article.favoritesCount}'),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
+      );
+    }
   Widget _buildImageFallback() {
     return Container(
       color: Colors.grey[300],

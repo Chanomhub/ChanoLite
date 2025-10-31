@@ -1,9 +1,10 @@
+import 'package:chanolite/models/download.dart';
 
 class ArticlesResponse {
   final List<Article> articles;
-  final int articlesCount;
+  final int? articlesCount;
 
-  ArticlesResponse({required this.articles, required this.articlesCount});
+  ArticlesResponse({required this.articles, this.articlesCount});
 
   factory ArticlesResponse.fromJson(Map<String, dynamic> json) {
     return ArticlesResponse(
@@ -18,7 +19,7 @@ class ArticlesResponse {
 class Article {
   final int id;
   final String title;
-  final String slug;
+  final String? slug;
   final String description;
   final String body;
   final dynamic ver;
@@ -38,11 +39,12 @@ class Article {
   final bool favorited;
   final int favoritesCount;
   final dynamic sequentialCode;
+  final List<Download> downloads;
 
   Article({
     required this.id,
     required this.title,
-    required this.slug,
+    this.slug,
     required this.description,
     required this.body,
     this.ver,
@@ -62,11 +64,12 @@ class Article {
     required this.favorited,
     required this.favoritesCount,
     this.sequentialCode,
+    required this.downloads,
   });
 
   factory Article.fromJson(Map<String, dynamic> json) {
     return Article(
-      id: json['id'],
+      id: (json['id'] is String) ? int.parse(json['id']) : json['id'],
       title: json['title'],
       slug: json['slug'],
       description: json['description'],
@@ -78,61 +81,45 @@ class Article {
       status: json['status'],
       engine: json['engine'],
       mainImage: json['mainImage'],
-      images: List<String>.from(json['images']),
+      images: (json['images'] != null && json['images'].isNotEmpty && json['images'][0] is Map)
+          ? (json['images'] as List).map((e) => e['url'] as String).toList()
+          : List<String>.from(json['images'] ?? []),
       backgroundImage: json['backgroundImage'],
       coverImage: json['coverImage'],
-      tagList: List<String>.from(json['tagList']),
-      categoryList: List<String>.from(json['categoryList']),
-      platformList: List<String>.from(json['platformList']),
+      tagList: (json['tags'] != null)
+          ? (json['tags'] as List).map((e) => e['name'] as String).toList()
+          : List<String>.from(json['tagList'] ?? []),
+      categoryList: (json['categories'] != null)
+          ? (json['categories'] as List).map((e) => e['name'] as String).toList()
+          : List<String>.from(json['categoryList'] ?? []),
+      platformList: (json['platforms'] != null)
+          ? (json['platforms'] as List).map((e) => e['name'] as String).toList()
+          : List<String>.from(json['platformList'] ?? []),
       author: Author.fromJson(json['author']),
-      favorited: json['favorited'],
-      favoritesCount: json['favoritesCount'],
+      favorited: json['favorited'] ?? false,
+      favoritesCount: json['favoritesCount'] ?? 0,
       sequentialCode: json['sequentialCode'],
+      downloads: (json['downloads'] as List? ?? []).map((e) => Download.fromJson(e)).toList(),
     );
   }
 }
 
 class Author {
-  final String username;
-  final dynamic bio;
-  final dynamic image;
-  final dynamic backgroundImage;
-  final bool following;
-  final List<SocialMediaLink> socialMediaLinks;
+  final String? id;
+  final String name;
+  final String? image;
 
   Author({
-    required this.username,
-    this.bio,
+    this.id,
+    required this.name,
     this.image,
-    this.backgroundImage,
-    required this.following,
-    required this.socialMediaLinks,
   });
 
   factory Author.fromJson(Map<String, dynamic> json) {
     return Author(
-      username: json['username'],
-      bio: json['bio'],
+      id: json['id'],
+      name: json['name'] ?? json['username'],
       image: json['image'],
-      backgroundImage: json['backgroundImage'],
-      following: json['following'],
-      socialMediaLinks: (json['socialMediaLinks'] as List? ?? [])
-          .map((e) => SocialMediaLink.fromJson(e))
-          .toList(),
-    );
-  }
-}
-
-class SocialMediaLink {
-  final String platform;
-  final String url;
-
-  SocialMediaLink({required this.platform, required this.url});
-
-  factory SocialMediaLink.fromJson(Map<String, dynamic> json) {
-    return SocialMediaLink(
-      platform: json['platform'],
-      url: json['url'],
     );
   }
 }
