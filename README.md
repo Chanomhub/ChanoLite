@@ -90,34 +90,6 @@ chanolite/
 
 ---
 
-## 🛠 Technologies & Dependencies
-
-### Core Framework
-- **Flutter** - UI Framework
-- **Dart** (^3.9.2) - Programming Language
-
-### Key Packages
-- **flutter_inappwebview** (^6.0.0) - In-app browser functionality
-- **dio** (^5.5.0+1) - Advanced HTTP client
-- **provider** (^6.1.2) - State management
-- **shared_preferences** (^2.2.3) - Local data persistence
-- **file_picker** (^8.0.6) - File selection
-- **path_provider** (^2.1.3) - File system paths
-
-### UI & Content
-- **flex_color_scheme** (^8.3.0) - Advanced theming
-- **flutter_html** (^3.0.0) - HTML rendering
-- **markdown** (^7.2.0) - Markdown support
-
-### Additional Features
-- **archive** (^3.5.1) - ZIP file handling
-- **open_file** (^3.5.10) - File opening
-- **url_launcher** (^6.3.1) - External URL handling
-- **package_info_plus** (^8.0.3) - App information
-- **applovin_max** (^4.5.1) - Ad integration
-
----
-
 ## 📖 Additional Documentation
 
 - [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
