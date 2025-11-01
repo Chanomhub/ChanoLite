@@ -102,6 +102,34 @@ class Article {
       downloads: (json['downloads'] as List? ?? []).map((e) => Download.fromJson(e)).toList(),
     );
   }
+
+  factory Article.dummy() {
+    return Article(
+      id: 0,
+      title: 'Loading article...',
+      slug: 'loading-article',
+      description: 'This is a placeholder for a loading article. The content is being fetched.',
+      body: 'Loading...',
+      ver: '1.0',
+      version: 1,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      status: 'PUBLISHED',
+      engine: 'Flutter',
+      mainImage: null,
+      images: [],
+      backgroundImage: null,
+      coverImage: null,
+      tagList: ['loading', 'skeleton'],
+      categoryList: ['news'],
+      platformList: ['android', 'ios'],
+      author: Author.dummy(),
+      favorited: false,
+      favoritesCount: 99,
+      sequentialCode: null,
+      downloads: [],
+    );
+  }
 }
 
 class Author {
@@ -120,6 +148,14 @@ class Author {
       id: json['id'],
       name: json['name'] ?? json['username'],
       image: json['image'],
+    );
+  }
+
+  factory Author.dummy() {
+    return Author(
+      id: '0',
+      name: 'Chano-chan',
+      image: '',
     );
   }
 }

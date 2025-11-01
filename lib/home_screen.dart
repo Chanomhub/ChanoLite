@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import 'article_detail_screen.dart';
 import 'models/article_model.dart';
@@ -474,11 +475,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
+    if (_error != null && !_isLoading) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -496,24 +493,31 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    if (_articles.isEmpty) {
+    if (_articles.isEmpty && !_isLoading) {
       return const Center(child: Text('No articles found.'));
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadArticles,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSearchCard(),
-            _buildTopFilters(),
-            if (_heroArticles.isNotEmpty) _buildHeroCarousel(),
-            for (final section in _curatedSections)
-              _buildHorizontalSection(section),
-            const SizedBox(height: 24),
-          ],
+    return Skeletonizer(
+      enabled: _isLoading,
+      child: RefreshIndicator(
+        onRefresh: _loadArticles,
+        child: SingleChildScrollView(
+          physics: _isLoading
+              ? const NeverScrollableScrollPhysics()
+              : const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSearchCard(),
+              _buildTopFilters(),
+              if (_heroArticles.isNotEmpty || _isLoading) _buildHeroCarousel(),
+              for (final section in _isLoading
+                  ? List.filled(2, _CuratedSection.dummy())
+                  : _curatedSections)
+                _buildHorizontalSection(section),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -583,13 +587,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTopFilters() {
-    if (_topTags.isEmpty && _topPlatforms.isEmpty) {
+    final tags = _isLoading ? List.filled(4, '        ') : _topTags;
+    final platforms = _isLoading ? List.filled(3, '          ') : _topPlatforms;
+
+    if (tags.isEmpty && platforms.isEmpty) {
       return const SizedBox.shrink();
     }
 
     final chips = <Widget>[];
 
-    for (final tag in _topTags) {
+    for (final tag in tags) {
       chips.add(
         ActionChip(
           label: Text('#$tag'),
@@ -598,7 +605,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    for (final platform in _topPlatforms) {
+    for (final platform in platforms) {
       chips.add(
         ActionChip(
           label: Text(platform),
@@ -624,15 +631,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeroCarousel() {
+    final articles = _isLoading ? List.filled(3, Article.dummy()) : _heroArticles;
     return Padding(
       padding: const EdgeInsets.only(top: 20),
       child: SizedBox(
         height: 250,
         child: PageView.builder(
           controller: _heroPageController,
-          itemCount: _heroArticles.length,
+          itemCount: articles.length,
           itemBuilder: (context, index) {
-            final article = _heroArticles[index];
+            final article = articles[index];
             final imageUrl =
                 article.coverImage ??
                     article.mainImage ??
@@ -824,7 +832,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        const SizedBox(height: 8),
+                        const Spacer(),
                         Row(
                           children: [
                             const Icon(Icons.favorite, size: 14),
@@ -892,4 +900,12 @@ class _CuratedSection {
   final String? subtitle;
   final List<Article> articles;
   final VoidCallback? onSeeAll;
+
+  factory _CuratedSection.dummy() {
+    return _CuratedSection(
+      title: '                ',
+      subtitle: '                    ',
+      articles: List.filled(5, Article.dummy()),
+    );
+  }
 }

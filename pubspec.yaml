@@ -51,6 +51,7 @@ dependencies:
   markdown: ^7.2.0
   flex_color_scheme: ^8.3.0
   applovin_max: ^4.5.1
+  skeletonizer: ^2.1.0
 
 dev_dependencies:
   flutter_test:
