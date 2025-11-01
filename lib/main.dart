@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:app_links/app_links.dart';
 
 import 'package:chanolite/game_library_screen.dart';
 import 'package:chanolite/home_screen.dart';
@@ -63,6 +64,35 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  late AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    initDeepLinks();
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> initDeepLinks() async {
+    _appLinks = AppLinks();
+
+    final initialLink = await _appLinks.getInitialLink();
+    if (initialLink != null) {
+      print('Initial deep link: $initialLink');
+      // TODO: Add navigation logic for the initial link.
+    }
+
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      print('Latest deep link: $uri');
+      // TODO: Add navigation logic for incoming links.
+    });
+  }
 
   static final List<Widget> _pages = <Widget>[
     const HomeScreen(),
