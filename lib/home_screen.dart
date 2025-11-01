@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final UpdateService _updateService = UpdateService();
   final PageController _heroPageController = PageController(
     viewportFraction: 0.86,
+    keepPage: true,
   );
   static const String _sdkKey = 'YOUR_APPLOVIN_SDK_KEY';
   static const String _bannerAdUnitId = 'YOUR_BANNER_AD_UNIT_ID';
@@ -380,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-                        Flexible(child: const Text('ChanoLite - Home')),
+            const Flexible(child: Text('ChanoLite - Home')),
             const SizedBox(width: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -497,28 +498,46 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Center(child: Text('No articles found.'));
     }
 
-    return Skeletonizer(
-      enabled: _isLoading,
-      child: RefreshIndicator(
-        onRefresh: _loadArticles,
-        child: SingleChildScrollView(
-          physics: _isLoading
-              ? const NeverScrollableScrollPhysics()
-              : const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSearchCard(),
-              _buildTopFilters(),
-              if (_heroArticles.isNotEmpty || _isLoading) _buildHeroCarousel(),
-              for (final section in _isLoading
-                  ? List.filled(2, _CuratedSection.dummy())
-                  : _curatedSections)
-                _buildHorizontalSection(section),
-              const SizedBox(height: 24),
-            ],
+    return RefreshIndicator(
+      onRefresh: _loadArticles,
+      child: CustomScrollView(
+        physics: _isLoading
+            ? const NeverScrollableScrollPhysics()
+            : const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Skeletonizer(
+              enabled: _isLoading,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSearchCard(),
+                  _buildTopFilters(),
+                  if (_heroArticles.isNotEmpty || _isLoading)
+                    _buildHeroCarousel(),
+                ],
+              ),
+            ),
           ),
-        ),
+          if (_isLoading)
+            ...List.filled(2, _CuratedSection.dummy()).map(
+                  (section) => SliverToBoxAdapter(
+                child: Skeletonizer(
+                  enabled: true,
+                  child: _buildHorizontalSection(section),
+                ),
+              ),
+            )
+          else
+            ..._curatedSections.map(
+                  (section) => SliverToBoxAdapter(
+                child: _buildHorizontalSection(section),
+              ),
+            ),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 24),
+          ),
+        ],
       ),
     );
   }
@@ -600,7 +619,7 @@ class _HomeScreenState extends State<HomeScreen> {
       chips.add(
         ActionChip(
           label: Text('#$tag'),
-          onPressed: () => _navigateToSearch(tag: tag),
+          onPressed: _isLoading ? null : () => _navigateToSearch(tag: tag),
         ),
       );
     }
@@ -609,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
       chips.add(
         ActionChip(
           label: Text(platform),
-          onPressed: () => _navigateToSearch(platform: platform),
+          onPressed: _isLoading ? null : () => _navigateToSearch(platform: platform),
         ),
       );
     }
@@ -623,6 +642,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
         itemBuilder: (context, index) => chips[index],
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemCount: chips.length,
@@ -638,75 +658,89 @@ class _HomeScreenState extends State<HomeScreen> {
         height: 250,
         child: PageView.builder(
           controller: _heroPageController,
+          physics: _isLoading ? const NeverScrollableScrollPhysics() : null,
           itemCount: articles.length,
           itemBuilder: (context, index) {
             final article = articles[index];
-            final imageUrl =
-                article.coverImage ??
-                    article.mainImage ??
-                    article.backgroundImage;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: GestureDetector(
-                onTap: () => _openArticle(article),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      imageUrl != null
-                          ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stack) =>
-                            _buildImageFallback(),
-                      )
-                          : _buildImageFallback(),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.75),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        bottom: 20,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              article.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              article.description,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white70),
-                            ),
-                          ],
-                        ),
-                      ),
+            return RepaintBoundary(
+              child: _buildHeroCard(article),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroCard(Article article) {
+    final imageUrl = article.coverImage ??
+        article.mainImage ??
+        article.backgroundImage;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: GestureDetector(
+        onTap: _isLoading ? null : () => _openArticle(article),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (imageUrl != null)
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  cacheWidth: 800,
+                  cacheHeight: 450,
+                  filterQuality: FilterQuality.medium,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return _buildImageFallback();
+                  },
+                  errorBuilder: (context, error, stack) => _buildImageFallback(),
+                )
+              else
+                _buildImageFallback(),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.75),
                     ],
                   ),
                 ),
               ),
-            );
-          },
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      article.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      article.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -754,7 +788,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (section.onSeeAll != null)
                   TextButton(
-                    onPressed: section.onSeeAll,
+                    onPressed: _isLoading ? null : section.onSeeAll,
                     child: const Text('See all'),
                   ),
               ],
@@ -766,9 +800,12 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
               itemBuilder: (context, index) {
                 final article = section.articles[index];
-                return _buildStoreCard(article);
+                return RepaintBoundary(
+                  child: _buildStoreCard(article),
+                );
               },
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemCount: section.articles.length,
@@ -779,81 +816,100 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-    Widget _buildStoreCard(Article article) {
-      final imageUrl =
-          article.coverImage ?? article.mainImage ?? article.backgroundImage;
-      return SizedBox(
-        width: 180,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => _openArticle(article),
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: Theme.of(context).colorScheme.surfaceVariant,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: imageUrl != null
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stack) =>
-                                _buildImageFallback(),
-                          )
-                        : _buildImageFallback(),
+  Widget _buildStoreCard(Article article) {
+    final imageUrl = article.coverImage ??
+        article.mainImage ??
+        article.backgroundImage;
+
+    return SizedBox(
+      width: 180,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _isLoading ? null : () => _openArticle(article),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Theme.of(context).colorScheme.surfaceVariant,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: imageUrl != null
+                      ? Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    cacheWidth: 360,
+                    cacheHeight: 203,
+                    filterQuality: FilterQuality.medium,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return _buildImageFallback();
+                    },
+                    errorBuilder: (context, error, stack) =>
+                        _buildImageFallback(),
+                  )
+                      : _buildImageFallback(),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        article.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        article.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          const Icon(Icons.favorite, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${article.favoritesCount}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          article.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          article.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const Spacer(),
-                        Row(
-                          children: [
-                            const Icon(Icons.favorite, size: 14),
-                            const SizedBox(width: 4),
-                            Text('${article.favoritesCount}'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
+
   Widget _buildImageFallback() {
     return Container(
       color: Colors.grey[300],
-      child: const Icon(Icons.article, color: Colors.black54),
+      child: const Center(
+        child: Icon(
+          Icons.article,
+          color: Colors.black54,
+          size: 48,
+        ),
+      ),
     );
   }
 
