@@ -79,6 +79,23 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
+  Future<void> register(
+      {required String email,
+      required String username,
+      required String password}) async {
+    _loading = true;
+    notifyListeners();
+
+    try {
+      final user = await _userService.registerUser(email, username, password);
+      await _addOrUpdateAccount(user);
+      await _setActive(user);
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> setActiveAccount(User user) async {
     await _setActive(user);
     notifyListeners();

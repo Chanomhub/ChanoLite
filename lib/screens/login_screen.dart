@@ -1,5 +1,6 @@
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/models/user_model.dart';
+import 'package:chanolite/screens/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -207,6 +208,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     )
                   : const Text('Sign in'),
             ),
+          ),
+          TextButton(
+            onPressed: auth.isLoading
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const RegistrationScreen(),
+                      ),
+                    );
+                  },
+            child: const Text("Don't have an account? Sign up"),
           ),
           if (hasAccounts)
             TextButton(
