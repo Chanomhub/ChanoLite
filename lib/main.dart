@@ -16,7 +16,9 @@ import 'package:chanolite/widgets/global_download_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chanolite/services/notification_service.dart';
+import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/article_detail_screen.dart';
+import 'package:chanolite/models/article_model.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -80,10 +82,14 @@ class _MyAppState extends State<MyApp> {
 
   void _handleMessage(RemoteMessage message) {
     if (message.data.containsKey('article_id')) {
-      final articleId = message.data['article_id'];
-      navigatorKey.currentState?.push(MaterialPageRoute(
-        builder: (context) => ArticleDetailScreen(article: articleId),
-      ));
+      final articleIdString = message.data['article_id'];
+      final articleId = int.tryParse(articleIdString ?? '');
+      if (articleId != null) {
+        final article = Article.idOnly(articleId);
+        navigatorKey.currentState?.push(MaterialPageRoute(
+          builder: (context) => ArticleDetailScreen(article: article),
+        ));
+      }
     }
   }
 
@@ -93,6 +99,7 @@ class _MyAppState extends State<MyApp> {
     final authManager = AuthManager()..load();
     return MultiProvider(
       providers: [
+        Provider<CacheService>(create: (_) => CacheService()),
         ChangeNotifierProvider(create: (_) => DownloadManager()),
         ChangeNotifierProvider.value(value: authManager),
         Provider<AdManager>.value(value: widget.adManager),

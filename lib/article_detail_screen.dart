@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:chanolite/services/cache_service.dart';
 import 'models/article_model.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
@@ -31,6 +32,23 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   }
 
   Future<void> _loadArticle() async {
+    final cache = Provider.of<CacheService>(context, listen: false);
+    final cacheKey = 'article_${widget.article.id}';
+
+    // Try to get from cache first
+    final cachedArticle = cache.get(cacheKey);
+    if (cachedArticle != null && cachedArticle is Article) {
+      if (mounted) {
+        setState(() {
+          _article = cachedArticle;
+          _isLoading = false;
+        });
+        print('Article loaded from CACHE: ${_article?.title}');
+      }
+      return;
+    }
+
+    // If not in cache, fetch from network
     try {
       Article article;
       if (widget.article.slug != null && widget.article.slug!.isNotEmpty) {
@@ -40,11 +58,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       }
 
       if (mounted) {
+        // Save to cache before setting state
+        cache.set(cacheKey, article);
+        
         setState(() {
           _article = article;
           _isLoading = false;
         });
-        print('Article loaded successfully: ${_article?.title}');
+        print('Article loaded from NETWORK: ${_article?.title}');
       }
     } catch (e, stackTrace) {
       if (mounted) {

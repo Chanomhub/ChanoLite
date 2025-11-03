@@ -67,6 +67,30 @@ class Article {
     required this.downloads,
   });
 
+  Article.idOnly(this.id)
+      : title = '',
+        slug = '',
+        description = '',
+        body = '',
+        ver = null,
+        version = null,
+        createdAt = DateTime.now(),
+        updatedAt = DateTime.now(),
+        status = '',
+        engine = null,
+        mainImage = null,
+        images = [],
+        backgroundImage = null,
+        coverImage = null,
+        tagList = [],
+        categoryList = [],
+        platformList = [],
+        author = Author.dummy(),
+        favorited = false,
+        favoritesCount = 0,
+        sequentialCode = null,
+        downloads = [];
+
   factory Article.fromJson(Map<String, dynamic> json) {
     return Article(
       id: (json['id'] is String) ? int.parse(json['id']) : json['id'],
