@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "145770803763",
+    "project_id": "chanolite-notification",
+    "storage_bucket": "chanolite-notification.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:145770803763:android:83d5735a2fa9dd541f2946",
+        "android_client_info": {
+          "package_name": "com.chanomhub.chanolite.chanolite"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUDxGkIJUnx5KBmJ0InxmpQGnIMmZ2Ykk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

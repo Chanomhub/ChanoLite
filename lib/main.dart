@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'package:chanolite/game_library_screen.dart';
 import 'package:chanolite/home_screen.dart';
@@ -13,8 +15,19 @@ import 'package:chanolite/theme/app_theme.dart';
 import 'package:chanolite/widgets/global_download_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:chanolite/services/notification_service.dart';
+import 'package:chanolite/article_detail_screen.dart';
 
-void main() {
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await NotificationService.initialize();
+  await _requestNotificationPermission();
+  final fcmToken = await FirebaseMessaging.instance.getToken();
+  print('FCM Token: $fcmToken');
+
   final adManager = AdManager(
     configProvider: () async => const AdManagerConfig(
       sdkKey: 'YOUR_APPLOVIN_SDK_KEY',
@@ -25,23 +38,67 @@ void main() {
   runApp(MyApp(adManager: adManager));
 }
 
-class MyApp extends StatelessWidget {
+Future<void> _requestNotificationPermission() async {
+  final messaging = FirebaseMessaging.instance;
+  await messaging.requestPermission(
+    alert: true,
+    announcement: false,
+    badge: true,
+    carPlay: false,
+    criticalAlert: false,
+    provisional: false,
+    sound: true,
+  );
+}
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key, required this.adManager});
 
   final AdManager adManager;
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    _setupInteractedMessage();
+  }
+
+  Future<void> _setupInteractedMessage() async {
+    RemoteMessage? initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
+
+    if (initialMessage != null) {
+      _handleMessage(initialMessage);
+    }
+
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
+  }
+
+  void _handleMessage(RemoteMessage message) {
+    if (message.data.containsKey('article_id')) {
+      final articleId = message.data['article_id'];
+      navigatorKey.currentState?.push(MaterialPageRoute(
+        builder: (context) => ArticleDetailScreen(article: articleId),
+      ));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     const palette = SeasonalPalette.spooky;
-    final authManager = AuthManager()
-      ..load();
+    final authManager = AuthManager()..load();
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => DownloadManager()),
         ChangeNotifierProvider.value(value: authManager),
-        Provider<AdManager>.value(value: adManager),
+        Provider<AdManager>.value(value: widget.adManager),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         title: 'ChanoLite',
         theme: AppTheme.light(palette: palette),
         darkTheme: AppTheme.dark(palette: palette),

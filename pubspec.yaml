@@ -53,6 +53,9 @@ dependencies:
   applovin_max: ^4.5.1
   skeletonizer: ^2.1.0
   app_links: ^6.4.1
+  firebase_core: ^4.2.1
+  firebase_messaging: ^16.0.4
+  firebase_analytics: ^12.0.1
 
 dev_dependencies:
   flutter_test:
