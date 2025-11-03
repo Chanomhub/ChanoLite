@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:chanolite/services/api/article_service.dart';
+import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/widgets/search_menu_component.dart';
 import 'package:flutter/material.dart';
 
@@ -52,6 +53,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final ArticleService _articleService = ArticleService();
+  final CacheService _cacheService = CacheService();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _filterTagController = TextEditingController();
@@ -119,7 +121,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
     setState(() {});
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
+    _debounce = Timer(const Duration(milliseconds: 1200), () {
       _loadArticles(reset: true);
     });
   }
@@ -157,17 +159,52 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     }
 
+    final query = _normalizeFilter(_searchController.text);
+    final cacheKey =
+        'articles_search?q=$query&t=$_selectedTag&c=$_selectedCategory&p=$_selectedPlatform&e=$_selectedEngine&s=$_selectedStatus&l=$_limit&o=$_offset';
+
     try {
+      if (reset) {
+        final cached = _cacheService.get(cacheKey);
+        if (cached != null) {
+          final response = ArticlesResponse.fromJson(cached);
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _articles = response.articles;
+            _articlesCount = response.articlesCount;
+            final fetched = response.articles.length;
+            _offset = fetched;
+            if (_articlesCount != null) {
+              _hasMore = _articles.length < _articlesCount!;
+            } else {
+              _hasMore = fetched == _limit;
+            }
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
       final response = await _articleService.getArticles(
         limit: _limit,
         offset: _offset,
-        query: _normalizeFilter(_searchController.text),
+        query: query,
         tag: _selectedTag,
         category: _selectedCategory,
         platform: _selectedPlatform,
         engine: _selectedEngine,
         status: _selectedStatus,
       );
+
+      if (reset && response.articles.isNotEmpty) {
+        _cacheService.set(
+          cacheKey,
+          response.toJson(),
+          duration: const Duration(minutes: 10),
+        );
+      }
 
       if (!mounted) {
         return;

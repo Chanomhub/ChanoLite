@@ -22,4 +22,14 @@ class Download {
       vipOnly: json['vipOnly'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'url': url,
+      'isActive': isActive,
+      'vipOnly': vipOnly,
+    };
+  }
 }

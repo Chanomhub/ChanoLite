@@ -14,6 +14,13 @@ class ArticlesResponse {
       articlesCount: json['articlesCount'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'articles': articles.map((article) => article.toJson()).toList(),
+      'articlesCount': articlesCount,
+    };
+  }
 }
 
 class Article {
@@ -127,10 +134,38 @@ class Article {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'slug': slug,
+      'description': description,
+      'body': body,
+      'ver': ver,
+      'version': version,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'status': status,
+      'engine': engine,
+      'mainImage': mainImage,
+      'images': images,
+      'backgroundImage': backgroundImage,
+      'coverImage': coverImage,
+      'tagList': tagList,
+      'categoryList': categoryList,
+      'platformList': platformList,
+      'author': author.toJson(),
+      'favorited': favorited,
+      'favoritesCount': favoritesCount,
+      'sequentialCode': sequentialCode,
+      'downloads': downloads.map((e) => e.toJson()).toList(),
+    };
+  }
+
   factory Article.dummy() {
     return Article(
       id: 0,
-      title: 'Loading article...',
+      title: 'Loading article...', 
       slug: 'loading-article',
       description: 'This is a placeholder for a loading article. The content is being fetched.',
       body: 'Loading...',
@@ -173,6 +208,14 @@ class Author {
       name: json['name'] ?? json['username'],
       image: json['image'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'image': image,
+    };
   }
 
   factory Author.dummy() {
