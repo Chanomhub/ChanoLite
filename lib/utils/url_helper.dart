@@ -1,4 +1,3 @@
-
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,14 +27,12 @@ class InAppBrowserHelper extends InAppBrowser {
     }
 
     // Look for filename*=UTF-8''...
-    // This is the modern way to encode filenames and supports unicode.
     final utf8FilenameRegex = RegExp(r"filename\*=UTF-8''(.+)");
     var match = utf8FilenameRegex.firstMatch(contentDisposition);
     if (match != null) {
       final encodedFilename = match.group(1);
       if (encodedFilename != null) {
         try {
-          // URL-decode the filename
           return Uri.decodeComponent(encodedFilename);
         } catch (e) {
           // Fallback to the next method if decoding fails
@@ -53,6 +50,25 @@ class InAppBrowserHelper extends InAppBrowser {
     return null;
   }
 
+  static String? _getFilenameFromUrl(Uri url) {
+    final path = url.path;
+    if (path.isEmpty || path.endsWith('/')) {
+      return null;
+    }
+
+    final segments = path.split('/');
+    final lastSegment = segments.last;
+    if (lastSegment.isEmpty) {
+      return null;
+    }
+
+    try {
+      return Uri.decodeComponent(lastSegment);
+    } catch (e) {
+      return lastSegment; // Return as is if decoding fails
+    }
+  }
+
   @override
   Future onBrowserCreated() async {}
 
@@ -66,11 +82,16 @@ class InAppBrowserHelper extends InAppBrowser {
   void onExit() {}
 
   static Future<void> openUrl(
-    String url,
-    {required DownloadManager downloadManager, String? authToken}
-  ) async {
+      String url,
+      {required DownloadManager downloadManager, String? authToken}
+      ) async {
     final uri = Uri.tryParse(url);
-    if (authToken != null && authToken.isNotEmpty && uri != null && uri.hasAuthority) {
+    if (uri == null) {
+      return;
+    }
+
+    // ตั้งค่า cookie สำหรับ authentication
+    if (authToken != null && authToken.isNotEmpty && uri.hasAuthority) {
       await CookieManager.instance().setCookie(
         url: WebUri('${uri.scheme}://${uri.host}'),
         name: 'token',
@@ -94,7 +115,7 @@ class InAppBrowserHelper extends InAppBrowser {
         inAppWebViewGroupOptions: InAppWebViewGroupOptions(
           crossPlatform: InAppWebViewOptions(
             contentBlockers: _contentBlockers,
-            useOnDownloadStart: true, // This is crucial
+            useOnDownloadStart: true,
             useShouldOverrideUrlLoading: true,
           ),
         ),
@@ -104,10 +125,13 @@ class InAppBrowserHelper extends InAppBrowser {
 
   @override
   Future<void> onDownloadStartRequest(DownloadStartRequest downloadStartRequest) async {
-    // Prioritize filename from Content-Disposition header, fallback to suggestedFilename
-    final fileName = _extractFilename(downloadStartRequest.contentDisposition) ?? downloadStartRequest.suggestedFilename;
+    // Prioritize filename from Content-Disposition header, fallback to URL, then suggestedFilename
+    final fileName = _extractFilename(downloadStartRequest.contentDisposition) ??
+        _getFilenameFromUrl(downloadStartRequest.url) ??
+        downloadStartRequest.suggestedFilename;
 
-    // Instead of letting the webview download, we pass the url to our DownloadManager
+    // Native download manager จะจัดการทุกอย่างให้เอง
+    // รวมถึงเว็บที่ซับซ้อนอย่าง Mega, Google Drive
     await downloadManager.startDownload(
       downloadStartRequest.url.toString(),
       suggestedFilename: fileName,

@@ -1,17 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:ui';
 
 import 'package:chanolite/models/download_task.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_downloader/flutter_downloader.dart' as downloader;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 
+@pragma('vm:entry-point')
 class DownloadManager extends ChangeNotifier {
-  final Dio _dio = Dio();
   final List<DownloadTask> _tasks = [];
   static const MethodChannel _platformChannel = MethodChannel(
     'com.chanomhub.chanolite/download_notifications',
@@ -22,6 +24,8 @@ class DownloadManager extends ChangeNotifier {
 
   List<DownloadTask> get tasks => _tasks;
 
+  final ReceivePort _port = ReceivePort();
+
   static const List<String> _archiveExtensions = [
     '.zip',
     '.rar',
@@ -31,53 +35,100 @@ class DownloadManager extends ChangeNotifier {
     '.bz2',
   ];
 
-  Future<void> initialize() async {
-    final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getStringList(downloadTasksKey);
-    if (stored == null) {
+  DownloadManager() {
+    _bindBackgroundIsolate();
+    downloader.FlutterDownloader.registerCallback(downloadCallback);
+  }
+
+  void _bindBackgroundIsolate() {
+    final isSuccess = IsolateNameServer.registerPortWithName(
+      _port.sendPort,
+      'downloader_send_port',
+    );
+    if (!isSuccess) {
+      _unbindBackgroundIsolate();
+      _bindBackgroundIsolate();
+      return;
+    }
+    _port.listen((dynamic data) {
+      final taskId = data[0] as String;
+      final status = _intToStatus(data[1] as int);
+      final progress = data[2] as int;
+
+      _updateTaskByTaskId(
+        taskId,
+        status: status,
+        progress: progress / 100,
+        persist: status == DownloadTaskStatus.complete ||
+            status == DownloadTaskStatus.failed,
+      );
+    });
+  }
+
+  void _unbindBackgroundIsolate() {
+    IsolateNameServer.removePortNameMapping('downloader_send_port');
+  }
+
+  DownloadTaskStatus _intToStatus(int statusValue) {
+    // This mapping is based on the values from flutter_downloader's DownloadTaskStatus
+    // enqueued = 1, running = 2, complete = 3, failed = 4, canceled = 5, paused = 6
+    if (statusValue == 1) return DownloadTaskStatus.enqueued;
+    if (statusValue == 2) return DownloadTaskStatus.running;
+    if (statusValue == 3) return DownloadTaskStatus.complete;
+    if (statusValue == 4) return DownloadTaskStatus.failed;
+    if (statusValue == 5) return DownloadTaskStatus.canceled;
+    if (statusValue == 6) return DownloadTaskStatus.paused;
+    return DownloadTaskStatus.failed; // Default to failed for any unknown status
+  }
+
+  @pragma('vm:entry-point')
+  static void downloadCallback(String id, int status, int progress) {
+    final SendPort? send = IsolateNameServer.lookupPortByName('downloader_send_port');
+    send?.send([id, status, progress]);
+  }
+
+  Future<void> loadTasks() async {
+    final downloaderTasks = await downloader.FlutterDownloader.loadTasks();
+    if (downloaderTasks == null) {
       return;
     }
 
-    final List<DownloadTask> restored = [];
-    for (final entry in stored) {
-      try {
-        final Map<String, dynamic> jsonMap =
-            json.decode(entry) as Map<String, dynamic>;
-        var task = DownloadTask.fromJson(jsonMap);
-        if (task.filePath != null) {
-          final file = File(task.filePath!);
-          final exists = await file.exists();
-          if (!exists && task.status == DownloadTaskStatus.complete) {
-            continue;
-          }
-        }
-        if (task.status == DownloadTaskStatus.running ||
-            task.status == DownloadTaskStatus.enqueued) {
-          task = task.copyWith(
-            status: DownloadTaskStatus.failed,
-            progress: 0.0,
-          );
-        }
-        restored.add(task);
-      } catch (_) {
-        continue;
-      }
+    final List<DownloadTask> newTasks = [];
+    for (final task in downloaderTasks) {
+      final fileName = task.filename;
+      if (fileName == null) continue;
+
+      final type = _archiveExtensions.any(
+        (ext) => fileName.toLowerCase().endsWith(ext),
+      )
+          ? DownloadType.archive
+          : DownloadType.file;
+
+      final localTask = DownloadTask(
+        url: task.url,
+        status: _intToStatus(task.status.index),
+        progress: task.progress / 100.0,
+        filePath: task.savedDir + Platform.pathSeparator + fileName,
+        fileName: fileName,
+        type: type,
+        taskId: task.taskId,
+      );
+      newTasks.add(localTask);
     }
 
     _tasks
       ..clear()
-      ..addAll(restored);
+      ..addAll(newTasks);
     notifyListeners();
-    await _persistTasks();
   }
 
   Future<void> startDownload(
-    String url, {
-    String? suggestedFilename,
-    String? authToken,
-  }) async {
+      String url, {
+        String? suggestedFilename,
+        String? authToken,
+      }) async {
     if (_tasks.any((task) =>
-        task.url == url &&
+    task.url == url &&
         (task.status == DownloadTaskStatus.running ||
             task.status == DownloadTaskStatus.enqueued))) {
       return;
@@ -87,24 +138,18 @@ class DownloadManager extends ChangeNotifier {
     String? savePath = prefs.getString(downloadPathKey);
 
     if (savePath == null) {
-      final directory = await getApplicationDocumentsDirectory();
-      savePath = directory.path;
+      if (Platform.isAndroid) {
+        savePath = '/storage/emulated/0/Download';
+      } else {
+        final directory = await getApplicationDocumentsDirectory();
+        savePath = directory.path;
+      }
     }
 
-    final task = DownloadTask(
-      url: url,
-      status: DownloadTaskStatus.enqueued,
-    );
-    _tasks.add(task);
-    notifyListeners();
-    _schedulePersist();
-
-    final fileName =
-        suggestedFilename ?? path.basename(url.split('?').first);
-    final filePath = path.join(savePath, fileName);
+    final fileName = suggestedFilename ?? path.basename(url.split('?').first);
 
     final type = _archiveExtensions.any(
-      (ext) => fileName.toLowerCase().endsWith(ext),
+          (ext) => fileName.toLowerCase().endsWith(ext),
     )
         ? DownloadType.archive
         : DownloadType.file;
@@ -112,53 +157,61 @@ class DownloadManager extends ChangeNotifier {
     unawaited(_notifyDownloadStarted(fileName));
 
     try {
-      _updateTask(
-        url,
-        status: DownloadTaskStatus.running,
+      final taskId = await downloader.FlutterDownloader.enqueue(
+        url: url,
+        savedDir: savePath,
         fileName: fileName,
-        filePath: filePath,
-        type: type,
+        headers: authToken != null && authToken.isNotEmpty
+            ? {'Cookie': 'token=$authToken'}
+            : {},
+        showNotification: true,
+        openFileFromNotification: true,
       );
 
-      await _dio.download(
-        url,
-        filePath,
-        options: Options(
-          headers: authToken != null && authToken.isNotEmpty
-              ? {'Cookie': 'token=$authToken'}
-              : null,
-        ),
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            final progress = received / total;
-            _updateTask(
-              url,
-              progress: progress,
-              persist: false,
-            );
-          }
-        },
-      );
-
-      _updateTask(
-        url,
-        status: DownloadTaskStatus.complete,
-        progress: 1.0,
-      );
+      if (taskId != null) {
+        final filePath = path.join(savePath, fileName);
+        final task = DownloadTask(
+          url: url,
+          status: DownloadTaskStatus.enqueued,
+          fileName: fileName,
+          filePath: filePath,
+          type: type,
+          taskId: taskId,
+        );
+        _tasks.add(task);
+        notifyListeners();
+      }
     } catch (e) {
-      _updateTask(url, status: DownloadTaskStatus.failed);
+      print('Error starting download: $e');
+    }
+  }
+
+  void _updateTaskByTaskId(
+      String taskId, {
+        DownloadTaskStatus? status,
+        double? progress,
+        bool persist = true,
+      }) {
+    final index = _tasks.indexWhere((task) => task.taskId == taskId);
+    if (index != -1) {
+      _tasks[index] = _tasks[index].copyWith(
+        status: status,
+        progress: progress,
+      );
+      notifyListeners();
     }
   }
 
   void _updateTask(
-    String url, {
-    DownloadTaskStatus? status,
-    double? progress,
-    String? filePath,
-    String? fileName,
-    DownloadType? type,
-    bool persist = true,
-  }) {
+      String url, {
+        DownloadTaskStatus? status,
+        double? progress,
+        String? filePath,
+        String? fileName,
+        DownloadType? type,
+        String? taskId,
+        bool persist = true,
+      }) {
     final index = _tasks.indexWhere((task) => task.url == url);
     if (index != -1) {
       _tasks[index] = _tasks[index].copyWith(
@@ -167,19 +220,23 @@ class DownloadManager extends ChangeNotifier {
         filePath: filePath,
         fileName: fileName,
         type: type,
+        taskId: taskId,
       );
       notifyListeners();
-      if (persist) {
-        _schedulePersist();
-      }
     }
   }
 
   Future<void> deleteTask(DownloadTask task) async {
+    // Cancel download if still running
+    if (task.taskId != null &&
+        (task.status == DownloadTaskStatus.running ||
+            task.status == DownloadTaskStatus.enqueued)) {
+      await downloader.FlutterDownloader.cancel(taskId: task.taskId!);
+    }
+
     if (task.filePath == null) {
       _tasks.removeWhere((t) => t.url == task.url);
       notifyListeners();
-      _schedulePersist();
       return;
     }
 
@@ -190,9 +247,30 @@ class DownloadManager extends ChangeNotifier {
       }
       _tasks.removeWhere((t) => t.url == task.url);
       notifyListeners();
-      _schedulePersist();
     } catch (e) {
       print('Error deleting file: $e');
+    }
+  }
+
+  Future<void> pauseTask(DownloadTask task) async {
+    if (task.taskId != null && task.status == DownloadTaskStatus.running) {
+      await downloader.FlutterDownloader.pause(taskId: task.taskId!);
+    }
+  }
+
+  Future<void> resumeTask(DownloadTask task) async {
+    if (task.taskId != null && task.status == DownloadTaskStatus.paused) {
+      final newTaskId = await downloader.FlutterDownloader.resume(taskId: task.taskId!);
+      if (newTaskId != null) {
+        _updateTask(task.url, taskId: newTaskId);
+      }
+    }
+  }
+
+  Future<void> retryTask(DownloadTask task) async {
+    if (task.status == DownloadTaskStatus.failed) {
+      await deleteTask(task);
+      await startDownload(task.url, suggestedFilename: task.fileName);
     }
   }
 
@@ -217,10 +295,6 @@ class DownloadManager extends ChangeNotifier {
     }
   }
 
-  void _schedulePersist() {
-    unawaited(_persistTasks());
-  }
-
   Future<void> _notifyDownloadStarted(String fileName) async {
     try {
       await _platformChannel.invokeMethod(
@@ -232,10 +306,9 @@ class DownloadManager extends ChangeNotifier {
     }
   }
 
-  Future<void> _persistTasks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final encoded =
-        _tasks.map((task) => json.encode(task.toJson())).toList();
-    await prefs.setStringList(downloadTasksKey, encoded);
+  @override
+  void dispose() {
+    _unbindBackgroundIsolate();
+    super.dispose();
   }
 }

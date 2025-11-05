@@ -1,7 +1,17 @@
+enum DownloadTaskStatus {
+  enqueued,
+  running,
+  complete,
+  failed,
+  canceled,
+  paused,
+}
 
-enum DownloadTaskStatus { enqueued, running, complete, failed, canceled, paused }
-
-enum DownloadType { file, archive, folder }
+enum DownloadType {
+  file,
+  archive,
+  folder,
+}
 
 class DownloadTask {
   final String url;
@@ -10,6 +20,7 @@ class DownloadTask {
   final String? filePath;
   final String? fileName;
   final DownloadType type;
+  final String? taskId; // ✨ เพิ่มฟิลด์นี้สำหรับ flutter_downloader
 
   DownloadTask({
     required this.url,
@@ -18,6 +29,7 @@ class DownloadTask {
     this.filePath,
     this.fileName,
     this.type = DownloadType.file,
+    this.taskId, // ✨ เพิ่มใน constructor
   });
 
   DownloadTask copyWith({
@@ -26,6 +38,7 @@ class DownloadTask {
     String? filePath,
     String? fileName,
     DownloadType? type,
+    String? taskId, // ✨ เพิ่มใน copyWith
   }) {
     return DownloadTask(
       url: url,
@@ -34,6 +47,7 @@ class DownloadTask {
       filePath: filePath ?? this.filePath,
       fileName: fileName ?? this.fileName,
       type: type ?? this.type,
+      taskId: taskId ?? this.taskId, // ✨ เพิ่มที่นี่
     );
   }
 
@@ -45,6 +59,7 @@ class DownloadTask {
       filePath: json['filePath'] as String?,
       fileName: json['fileName'] as String?,
       type: _typeFromName(json['type'] as String?),
+      taskId: json['taskId'] as String?, // ✨ เพิ่มการ deserialize
     );
   }
 
@@ -56,6 +71,7 @@ class DownloadTask {
       'filePath': filePath,
       'fileName': fileName,
       'type': type.name,
+      'taskId': taskId, // ✨ เพิ่มการ serialize
     };
   }
 
@@ -64,7 +80,7 @@ class DownloadTask {
       return DownloadTaskStatus.enqueued;
     }
     return DownloadTaskStatus.values.firstWhere(
-      (e) => e.name == value,
+          (e) => e.name == value,
       orElse: () => DownloadTaskStatus.enqueued,
     );
   }
@@ -74,7 +90,7 @@ class DownloadTask {
       return DownloadType.file;
     }
     return DownloadType.values.firstWhere(
-      (e) => e.name == value,
+          (e) => e.name == value,
       orElse: () => DownloadType.file,
     );
   }

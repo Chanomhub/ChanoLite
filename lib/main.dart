@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 
 import 'package:chanolite/game_library_screen.dart';
 import 'package:chanolite/home_screen.dart';
@@ -25,6 +26,10 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await FlutterDownloader.initialize(
+    debug: true,
+    ignoreSsl: true
+  );
   await NotificationService.initialize();
   await _requestNotificationPermission();
   final fcmToken = await FirebaseMessaging.instance.getToken();
@@ -37,7 +42,11 @@ Future<void> main() async {
     ),
   );
   unawaited(adManager.initialize());
-  runApp(MyApp(adManager: adManager));
+
+  final downloadManager = DownloadManager();
+  await downloadManager.loadTasks();
+
+  runApp(MyApp(adManager: adManager, downloadManager: downloadManager));
 }
 
 Future<void> _requestNotificationPermission() async {
@@ -54,9 +63,10 @@ Future<void> _requestNotificationPermission() async {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, required this.adManager});
+  const MyApp({super.key, required this.adManager, required this.downloadManager});
 
   final AdManager adManager;
+  final DownloadManager downloadManager;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -100,7 +110,7 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         Provider<CacheService>(create: (_) => CacheService()),
-        ChangeNotifierProvider(create: (_) => DownloadManager()),
+        ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: authManager),
         Provider<AdManager>.value(value: widget.adManager),
       ],
