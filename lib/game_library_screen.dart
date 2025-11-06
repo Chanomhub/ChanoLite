@@ -8,8 +8,16 @@ import 'package:chanolite/services/file_opener_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class GameLibraryScreen extends StatelessWidget {
+class GameLibraryScreen extends StatefulWidget {
   const GameLibraryScreen({super.key});
+
+  @override
+  _GameLibraryScreenState createState() => _GameLibraryScreenState();
+}
+
+class _GameLibraryScreenState extends State<GameLibraryScreen> {
+  final Set<DownloadTask> _selectedTasks = {};
+  bool _isSelectionMode = false;
 
   void _showRenameDialog(BuildContext context, DownloadTask task) {
     final TextEditingController _renameController = TextEditingController(text: task.fileName);
@@ -89,67 +97,92 @@ class GameLibraryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Game Library'),
-        actions: [
-          Consumer<AuthManager>(
+      appBar: _isSelectionMode
+          ? AppBar(
+              title: Text('${_selectedTasks.length} selected'),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    _selectedTasks.clear();
+                  });
+                },
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () {
+                    final downloadManager = Provider.of<DownloadManager>(context, listen: false);
+                    for (var task in _selectedTasks) {
+                      downloadManager.deleteTask(task);
+                    }
+                    setState(() {
+                      _isSelectionMode = false;
+                      _selectedTasks.clear();
+                    });
+                  },
+                ),
+              ],
+            )
+          : AppBar(
+              title: const Text('Game Library'),
+              actions: [
+                Consumer<AuthManager>(
+                  builder: (context, auth, _) {
+                    final theme = Theme.of(context);
+                    final user = auth.activeAccount;
+                    final hasAccounts = auth.accounts.isNotEmpty;
+                    final imageUrl = user?.image ?? '';
+                    final avatar = imageUrl.isNotEmpty
+                        ? CircleAvatar(
+                            radius: 16,
+                            backgroundImage: NetworkImage(imageUrl),
+                            backgroundColor: theme.colorScheme.primaryContainer,
+                          )
+                        : CircleAvatar(
+                            radius: 16,
+                            backgroundColor: theme.colorScheme.primaryContainer,
+                            foregroundColor: theme.colorScheme.onPrimaryContainer,
+                            child: Text(
+                              user?.username.isNotEmpty == true
+                                  ? user!.username[0].toUpperCase()
+                                  : '+',
+                            ),
+                          );
 
-            builder: (context, auth, _) {
-
-              final theme = Theme.of(context);
-              final user = auth.activeAccount;
-              final hasAccounts = auth.accounts.isNotEmpty;
-              final imageUrl = user?.image ?? '';
-              final avatar = imageUrl.isNotEmpty
-                  ? CircleAvatar(
-                      radius: 16,
-                      backgroundImage: NetworkImage(imageUrl),
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                    )
-                  : CircleAvatar(
-                      radius: 16,
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      foregroundColor: theme.colorScheme.onPrimaryContainer,
-                      child: Text(
-                        user?.username.isNotEmpty == true
-                            ? user!.username[0].toUpperCase()
-                            : '+',
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(999),
+                          onTap: () {
+                            if (hasAccounts) {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                builder: (_) => const AccountSwitcherSheet(),
+                              );
+                            } else {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
+                              );
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: avatar,
+                          ),
+                        ),
                       ),
                     );
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(999),
-                    onTap: () {
-                      if (hasAccounts) {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (_) => const AccountSwitcherSheet(),
-                        );
-                      } else {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(),
-                          ),
-                        );
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: avatar,
-                    ),
-                  ),
+                  },
                 ),
-              );
-            },
-
-          ),
-        ],
-      ),
+              ],
+            ),
       body: Consumer<DownloadManager>(
         builder: (context, downloadManager, child) {
           if (downloadManager.tasks.isEmpty) {
@@ -169,11 +202,30 @@ class GameLibraryScreen extends StatelessWidget {
             ),
             itemBuilder: (context, index) {
               final task = downloadManager.tasks[index];
-              return GestureDetector( // Wrap with GestureDetector
+              final isSelected = _selectedTasks.contains(task);
+
+              return GestureDetector(
+                onTap: () {
+                  if (_isSelectionMode) {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedTasks.remove(task);
+                      } else {
+                        _selectedTasks.add(task);
+                      }
+                    });
+                  } else {
+                    _showContextMenu(context, task);
+                  }
+                },
                 onLongPress: () {
-                  _showContextMenu(context, task);
+                  setState(() {
+                    _isSelectionMode = true;
+                    _selectedTasks.add(task);
+                  });
                 },
                 child: Card(
+                  color: isSelected ? Colors.blue.withOpacity(0.5) : null,
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Column(

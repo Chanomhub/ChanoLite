@@ -8,7 +8,9 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:chanolite/services/cache_service.dart';
+import 'package:chanolite/services/local_notification_service.dart';
 import 'models/article_model.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
   final Article article;
@@ -241,30 +243,79 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   subtitle: Text(link.url, maxLines: 1, overflow: TextOverflow.ellipsis),
                   trailing: IconButton(
                     icon: const Icon(Icons.download),
-                    onPressed: () {
-                      final downloadManager = Provider.of<DownloadManager>(context, listen: false);
-                      final authToken = Provider.of<AuthManager>(context, listen: false).activeAccount?.token;
-                      InAppBrowserHelper.openUrl(
-                        link.url,
-                        downloadManager: downloadManager,
-                        authToken: authToken,
-                      );
+                    onPressed: () async {
+                      final permissionStatus = await Permission.storage.request();
 
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Download started!'),
-                          action: SnackBarAction(
-                            label: 'GO TO LIBRARY',
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const GameLibraryScreen(),
-                                ),
-                              );
-                            },
+                      if (permissionStatus.isGranted) {
+                        final downloadManager = Provider.of<DownloadManager>(context, listen: false);
+                        final authToken = Provider.of<AuthManager>(context, listen: false).activeAccount?.token;
+
+                        InAppBrowserHelper.openUrl(
+                          link.url,
+                          downloadManager: downloadManager,
+                          authToken: authToken,
+                                                  onDownloadStart: (downloadStartRequest) async {
+                                                    await LocalNotificationService.showDownloadNotification(
+                                                      title: 'Download Detected',
+                                                      body: 'A download has been detected and will begin shortly.',
+                                                    );
+                          
+                                                    final fileName = InAppBrowserHelper.extractFilename(downloadStartRequest.contentDisposition) ??
+                                                        InAppBrowserHelper.getFilenameFromUrl(downloadStartRequest.url) ??
+                                                        downloadStartRequest.suggestedFilename;
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext dialogContext) {
+                                return AlertDialog(
+                                  title: const Text('Confirm Download'),
+                                  content: Text('Do you want to download this file?\n\n$fileName'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('Cancel'),
+                                      onPressed: () {
+                                        Navigator.of(dialogContext).pop();
+                                      },
+                                    ),
+                                    TextButton(
+                                      child: const Text('Download'),
+                                      onPressed: () {
+                                        Navigator.of(dialogContext).pop();
+                                        downloadManager.startDownload(
+                                          downloadStartRequest.url.toString(),
+                                          suggestedFilename: fileName,
+                                          authToken: authToken,
+                                        );
+
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: const Text('Download started!'),
+                                            action: SnackBarAction(
+                                              label: 'GO TO LIBRARY',
+                                              onPressed: () {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (context) => const GameLibraryScreen(),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Storage permission is required to download files.'),
                           ),
-                        ),
-                      );
+                        );
+                      }
                     },
                   ),
                 ),

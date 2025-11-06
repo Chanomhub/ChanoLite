@@ -7,7 +7,11 @@
 
 import 'package:chanolite/main.dart';
 import 'package:chanolite/managers/ad_manager.dart';
+import 'package:chanolite/managers/download_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+
+import 'mock.dart';
 
 void main() {
   testWidgets('App loads home screen with title', (WidgetTester tester) async {
@@ -17,8 +21,12 @@ void main() {
         bannerAdUnitId: 'TEST_BANNER_ID',
       ),
     );
+    final downloadManager = MockDownloadManager();
 
-    await tester.pumpWidget(MyApp(adManager: adManager));
+    // Mock the loadTasks method to avoid errors in the test environment
+    when(downloadManager.loadTasks()).thenAnswer((_) async => {});
+
+    await tester.pumpWidget(MyApp(adManager: adManager, downloadManager: downloadManager));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 

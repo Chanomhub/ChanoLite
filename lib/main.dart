@@ -17,6 +17,7 @@ import 'package:chanolite/widgets/global_download_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chanolite/services/notification_service.dart';
+import 'package:chanolite/services/local_notification_service.dart';
 import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/article_detail_screen.dart';
 import 'package:chanolite/models/article_model.dart';
@@ -31,6 +32,7 @@ Future<void> main() async {
     ignoreSsl: true
   );
   await NotificationService.initialize();
+  await LocalNotificationService.initialize();
   await _requestNotificationPermission();
   final fcmToken = await FirebaseMessaging.instance.getToken();
   print('FCM Token: $fcmToken');

@@ -10,12 +10,15 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
+import io.flutter.plugins.GeneratedPluginRegistrant
+
 class MainActivity : FlutterActivity() {
     private val channelName = "com.chanomhub.chanolite/download_notifications"
     private val notificationChannelId = "download_notifications_channel"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        GeneratedPluginRegistrant.registerWith(flutterEngine)
         createNotificationChannel()
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)

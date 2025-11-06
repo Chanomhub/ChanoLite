@@ -1,12 +1,19 @@
 import 'package:chanolite/managers/download_manager.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class InAppBrowserHelper extends InAppBrowser {
   final DownloadManager downloadManager;
   final String? authToken;
+  final void Function(DownloadStartRequest) onDownloadStartCallback;
 
-  InAppBrowserHelper({required this.downloadManager, this.authToken});
+
+  InAppBrowserHelper({
+    required this.downloadManager,
+    this.authToken,
+    required this.onDownloadStartCallback,
+  });
 
   // A basic list of ad-related domains to block.
   static final List<String> _adBlockDomains = [
@@ -21,7 +28,7 @@ class InAppBrowserHelper extends InAppBrowser {
     );
   }).toList();
 
-  static String? _extractFilename(String? contentDisposition) {
+  static String? extractFilename(String? contentDisposition) {
     if (contentDisposition == null) {
       return null;
     }
@@ -50,7 +57,7 @@ class InAppBrowserHelper extends InAppBrowser {
     return null;
   }
 
-  static String? _getFilenameFromUrl(Uri url) {
+  static String? getFilenameFromUrl(Uri url) {
     final path = url.path;
     if (path.isEmpty || path.endsWith('/')) {
       return null;
@@ -83,7 +90,11 @@ class InAppBrowserHelper extends InAppBrowser {
 
   static Future<void> openUrl(
       String url,
-      {required DownloadManager downloadManager, String? authToken}
+      {
+        required DownloadManager downloadManager,
+        String? authToken,
+        required void Function(DownloadStartRequest) onDownloadStart,
+      }
       ) async {
     final uri = Uri.tryParse(url);
     if (uri == null) {
@@ -105,6 +116,7 @@ class InAppBrowserHelper extends InAppBrowser {
     final InAppBrowserHelper browser = InAppBrowserHelper(
       downloadManager: downloadManager,
       authToken: authToken,
+      onDownloadStartCallback: onDownloadStart,
     );
     await browser.openUrlRequest(
       urlRequest: URLRequest(url: WebUri(url)),
@@ -125,18 +137,7 @@ class InAppBrowserHelper extends InAppBrowser {
 
   @override
   Future<void> onDownloadStartRequest(DownloadStartRequest downloadStartRequest) async {
-    // Prioritize filename from Content-Disposition header, fallback to URL, then suggestedFilename
-    final fileName = _extractFilename(downloadStartRequest.contentDisposition) ??
-        _getFilenameFromUrl(downloadStartRequest.url) ??
-        downloadStartRequest.suggestedFilename;
-
-    // Native download manager จะจัดการทุกอย่างให้เอง
-    // รวมถึงเว็บที่ซับซ้อนอย่าง Mega, Google Drive
-    await downloadManager.startDownload(
-      downloadStartRequest.url.toString(),
-      suggestedFilename: fileName,
-      authToken: authToken,
-    );
+    onDownloadStartCallback(downloadStartRequest);
   }
 
   @override

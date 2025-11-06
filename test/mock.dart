@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:chanolite/managers/auth_manager.dart';
+import 'package:chanolite/managers/download_manager.dart';
 
 typedef Callback = void Function(MethodCall call);
 
@@ -57,3 +58,4 @@ void setupFirebaseAuthMocks([Callback? customHandlers]) {
 }
 
 class MockAuthManager extends Mock implements AuthManager {}
+class MockDownloadManager extends Mock implements DownloadManager {}

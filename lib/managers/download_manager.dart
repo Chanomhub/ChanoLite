@@ -58,7 +58,7 @@ class DownloadManager extends ChangeNotifier {
       _updateTaskByTaskId(
         taskId,
         status: status,
-        progress: progress / 100,
+        progress: status == DownloadTaskStatus.complete ? 1.0 : progress / 100.0,
         persist: status == DownloadTaskStatus.complete ||
             status == DownloadTaskStatus.failed,
       );
@@ -70,15 +70,24 @@ class DownloadManager extends ChangeNotifier {
   }
 
   DownloadTaskStatus _intToStatus(int statusValue) {
-    // This mapping is based on the values from flutter_downloader's DownloadTaskStatus
-    // enqueued = 1, running = 2, complete = 3, failed = 4, canceled = 5, paused = 6
-    if (statusValue == 1) return DownloadTaskStatus.enqueued;
-    if (statusValue == 2) return DownloadTaskStatus.running;
-    if (statusValue == 3) return DownloadTaskStatus.complete;
-    if (statusValue == 4) return DownloadTaskStatus.failed;
-    if (statusValue == 5) return DownloadTaskStatus.canceled;
-    if (statusValue == 6) return DownloadTaskStatus.paused;
-    return DownloadTaskStatus.failed; // Default to failed for any unknown status
+    switch (statusValue) {
+      case 0:
+        return DownloadTaskStatus.paused;
+      case 1:
+        return DownloadTaskStatus.enqueued;
+      case 2:
+        return DownloadTaskStatus.running;
+      case 3:
+        return DownloadTaskStatus.complete;
+      case 4:
+        return DownloadTaskStatus.failed;
+      case 5:
+        return DownloadTaskStatus.canceled;
+      case 6:
+        return DownloadTaskStatus.paused;
+      default:
+        return DownloadTaskStatus.failed;
+    }
   }
 
   @pragma('vm:entry-point')
@@ -99,7 +108,7 @@ class DownloadManager extends ChangeNotifier {
       if (fileName == null) continue;
 
       final type = _archiveExtensions.any(
-        (ext) => fileName.toLowerCase().endsWith(ext),
+            (ext) => fileName.toLowerCase().endsWith(ext),
       )
           ? DownloadType.archive
           : DownloadType.file;
@@ -154,7 +163,7 @@ class DownloadManager extends ChangeNotifier {
         ? DownloadType.archive
         : DownloadType.file;
 
-    unawaited(_notifyDownloadStarted(fileName));
+    // unawaited(_notifyDownloadStarted(fileName));
 
     try {
       final taskId = await downloader.FlutterDownloader.enqueue(
@@ -244,6 +253,9 @@ class DownloadManager extends ChangeNotifier {
       final file = File(task.filePath!);
       if (await file.exists()) {
         await file.delete();
+      }
+      if (task.taskId != null) {
+        await downloader.FlutterDownloader.remove(taskId: task.taskId!);
       }
       _tasks.removeWhere((t) => t.url == task.url);
       notifyListeners();
