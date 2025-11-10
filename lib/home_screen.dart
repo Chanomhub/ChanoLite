@@ -3,13 +3,9 @@ import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/services/api/article_service.dart';
-import 'package:chanolite/services/update_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_html/flutter_html.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import 'article_detail_screen.dart';
@@ -25,7 +21,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ArticleService _articleService = ArticleService();
-  final UpdateService _updateService = UpdateService();
   final PageController _heroPageController = PageController(
     viewportFraction: 0.86,
     keepPage: true,
@@ -40,16 +35,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isLoading = true;
   String? _error;
-  bool _hasShownUpdateDialog = false;
 
   @override
   void initState() {
     super.initState();
     _initializeAppLovin();
     _loadArticles();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkForUpdates();
-    });
   }
 
   @override
@@ -132,130 +123,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = false;
       _error = null;
     });
-  }
-
-  Future<void> _checkForUpdates() async {
-    if (_hasShownUpdateDialog) {
-      return;
-    }
-
-    try {
-      final updateInfo = await _updateService.checkForUpdate();
-      if (!mounted || updateInfo == null) {
-        return;
-      }
-
-      _hasShownUpdateDialog = true;
-      await _showUpdateDialog(updateInfo);
-    } catch (error, stackTrace) {
-      debugPrint('Update check failed: $error');
-      debugPrint('$stackTrace');
-    }
-  }
-
-  Future<void> _showUpdateDialog(AppUpdateInfo info) async {
-    if (!mounted) {
-      return;
-    }
-
-    final updateUrl = info.releaseUrl.isNotEmpty
-        ? info.releaseUrl
-        : 'https://github.com/${_updateService.owner}/${_updateService.repository}/releases/latest';
-    final releaseNotesData = info.releaseNotesHtml ?? info.releaseNotes;
-
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return AlertDialog(
-          title: Text('Update available: ${info.versionLabel}'),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 420,
-              maxHeight: 360,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'A newer version of ChanoLite is available on GitHub.',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  if (releaseNotesData != null && releaseNotesData.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Html(
-                        data: releaseNotesData,
-                        shrinkWrap: true,
-                        style: {
-                          'body': Style(
-                            margin: Margins.zero,
-                            padding: HtmlPaddings.zero,
-                            fontSize: FontSize(
-                              theme.textTheme.bodySmall?.fontSize ?? 14,
-                            ),
-                            lineHeight: const LineHeight(1.4),
-                          ),
-                          'p': Style(margin: Margins.only(bottom: 12)),
-                          'ul': Style(
-                            margin: Margins.only(bottom: 12),
-                            padding: HtmlPaddings.only(left: 16),
-                          ),
-                          'ol': Style(
-                            margin: Margins.only(bottom: 12),
-                            padding: HtmlPaddings.only(left: 16),
-                          ),
-                          'li': Style(margin: Margins.only(bottom: 6)),
-                          'img': Style(
-                            margin: Margins.symmetric(vertical: 12),
-                            width: Width(100, Unit.percent),
-                            height: Height.auto(),
-                          ),
-                        },
-                        onLinkTap: (url, attributes, element) {
-                          if (url != null) {
-                            _openUpdateLink(url);
-                          }
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Later'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _openUpdateLink(updateUrl);
-              },
-              child: const Text('Update'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _openUpdateLink(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) {
-      debugPrint('Invalid update url: $url');
-      return;
-    }
-
-    if (!await canLaunchUrl(uri)) {
-      debugPrint('Cannot launch $url');
-      return;
-    }
-
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   void _prepareHomeContent() {

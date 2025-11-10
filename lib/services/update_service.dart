@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 import 'package:markdown/markdown.dart' as md;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -8,7 +7,7 @@ class UpdateService {
   UpdateService({
     http.Client? httpClient,
     this.owner = 'chanomhub',
-    this.repository = 'ChanoLite',
+    this.repository = 'chanolite',
   }) : _httpClient = httpClient ?? http.Client();
 
   final http.Client _httpClient;
@@ -111,6 +110,47 @@ class UpdateService {
       extensionSet: md.ExtensionSet.gitHubWeb,
     );
   }
+
+  /// ดึง releases ทั้งหมด (สูงสุด 30 รายการ)
+  Future<List<AppUpdateInfo>> getAllReleases({int perPage = 30}) async {
+    try {
+      final url = Uri.parse(
+        'https://api.github.com/repos/$owner/$repository/releases?per_page=$perPage',
+      );
+
+      final response = await _httpClient.get(
+        url,
+        headers: {'Accept': 'application/vnd.github.v3+json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data
+            .map((json) => AppUpdateInfo.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// เปรียบเทียบเวอร์ชัน
+  bool _isNewerVersion(String current, String latest) {
+    final currentParts = current.split('.').map(int.tryParse).toList();
+    final latestParts = latest.split('.').map(int.tryParse).toList();
+
+    for (int i = 0; i < 3; i++) {
+      final currentPart = i < currentParts.length ? (currentParts[i] ?? 0) : 0;
+      final latestPart = i < latestParts.length ? (latestParts[i] ?? 0) : 0;
+
+      if (latestPart > currentPart) return true;
+      if (latestPart < currentPart) return false;
+    }
+
+    return false;
+  }
 }
 
 class AppUpdateInfo {
@@ -131,6 +171,19 @@ class AppUpdateInfo {
   final String? releaseNotes;
   final String? releaseNotesHtml;
   final DateTime? publishedAt;
+
+  factory AppUpdateInfo.fromJson(Map<String, dynamic> json) {
+    return AppUpdateInfo(
+      title: json['name']?.toString().trim() ?? json['tag_name']?.toString().trim() ?? '',
+      versionLabel: json['tag_name']?.toString().replaceFirst('v', '') ?? '',
+      releaseNotes: json['body']?.toString(),
+      releaseNotesHtml: json['body_html']?.toString(),
+      releaseUrl: json['html_url']?.toString() ?? '',
+      publishedAt: json['published_at'] != null
+          ? DateTime.tryParse(json['published_at'])
+          : null,
+    );
+  }
 }
 
 class AppVersion implements Comparable<AppVersion> {
