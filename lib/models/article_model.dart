@@ -110,11 +110,26 @@ class Article {
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       status: json['status'],
-      engine: json['engine'],
+      engine: json['engine']?['name'] as String?,
       mainImage: json['mainImage'],
-      images: (json['images'] != null && json['images'].isNotEmpty && json['images'][0] is Map)
-          ? (json['images'] as List).map((e) => e['url'] as String).toList()
-          : List<String>.from(json['images'] ?? []),
+      images: (() {
+        final dynamic imagesData = json['images'];
+        if (imagesData == null) {
+          return <String>[];
+        } else if (imagesData is List) {
+          return imagesData.map<String>((e) {
+            if (e is Map && e.containsKey('url')) {
+              return e['url'] as String;
+            } else if (e is String) {
+              return e;
+            }
+            return ''; // Default or error handling for unexpected types in list
+          }).where((element) => element.isNotEmpty).toList();
+        } else if (imagesData is Map && imagesData.containsKey('url')) {
+          return [imagesData['url'] as String];
+        }
+        return <String>[]; // Default for unexpected types
+      })(),
       backgroundImage: json['backgroundImage'],
       coverImage: json['coverImage'],
       tagList: (json['tags'] != null)

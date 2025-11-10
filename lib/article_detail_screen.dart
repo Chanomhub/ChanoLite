@@ -360,7 +360,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             _buildInfoTableRow('ID', _article!.id.toString()),
             _buildInfoTableRow('Sequential Code', _article!.sequentialCode ?? 'N/A'),
             _buildInfoTableRow('Engine', _article!.engine ?? 'N/A'),
-            _buildInfoTableRow('Version', _article!.version?.toString() ?? 'N/A'),
+            _buildInfoTableRow('Version', _article!.ver ?? 'N/A'),
             _buildInfoTableRow('Status', _article!.status ?? 'N/A'),
             _buildInfoTableRow('Created At', DateFormat.yMMMd().format(_article!.createdAt)),
             _buildInfoTableRow('Updated At', DateFormat.yMMMd().format(_article!.updatedAt)),

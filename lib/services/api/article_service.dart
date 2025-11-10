@@ -109,6 +109,7 @@ class ArticleService {
         article(slug: $slug) {
           id
           slug
+          sequentialCode
           title
           description
           body
@@ -133,6 +134,9 @@ class ArticleService {
             name
           }
           platforms {
+            name
+          }
+          engine {
             name
           }
           favoritesCount
