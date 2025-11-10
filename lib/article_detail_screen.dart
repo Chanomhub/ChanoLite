@@ -255,7 +255,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                           downloadManager: downloadManager,
                           authToken: authToken,
                                                   onDownloadStart: (downloadStartRequest) async {
-                                                    await LocalNotificationService.showDownloadNotification(
+                                                    await LocalNotificationService.showNotification(
                                                       title: 'Download Detected',
                                                       body: 'A download has been detected and will begin shortly.',
                                                     );

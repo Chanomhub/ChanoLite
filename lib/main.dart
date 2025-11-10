@@ -37,6 +37,9 @@ Future<void> main() async {
   final fcmToken = await FirebaseMessaging.instance.getToken();
   print('FCM Token: $fcmToken');
 
+  await FirebaseMessaging.instance.subscribeToTopic('all');
+  print('Subscribed to topic: all');
+
   final adManager = AdManager(
     configProvider: () async => const AdManagerConfig(
       sdkKey: 'YOUR_APPLOVIN_SDK_KEY',

@@ -1,11 +1,11 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:chanolite/services/local_notification_service.dart'; // เพิ่มบรรทัดนี้
 
 class NotificationService {
   static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     await Firebase.initializeApp();
     print("Handling a background message: ${message.messageId}");
-    // Here you can perform any background tasks, e.g., update UI, save data
   }
 
   static Future<void> initialize() async {
@@ -19,7 +19,6 @@ class NotificationService {
       sound: true,
     );
 
-    // Request permission for notifications
     NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
       announcement: false,
@@ -32,9 +31,12 @@ class NotificationService {
 
     print('User granted permission: ${settings.authorizationStatus}');
 
-    // Get the FCM token
     String? token = await FirebaseMessaging.instance.getToken();
     print("FCM Token: $token");
+
+    // Subscribe to 'all' topic
+    await FirebaseMessaging.instance.subscribeToTopic('all');
+    print("Subscribed to topic: all");
 
     // Listen for foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -43,22 +45,24 @@ class NotificationService {
 
       if (message.notification != null) {
         print('Message also contained a notification: ${message.notification!.title}');
-        // You can display a local notification here
+
+        // แสดง Local Notification เมื่ออยู่ในแอพ
+        LocalNotificationService.showNotification(
+          title: message.notification!.title ?? 'Notification',
+          body: message.notification!.body ?? '',
+          payload: message.data['article_id']?.toString(),
+        );
       }
     });
 
-    // Handle messages when the app is opened from a terminated state
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         print('App opened from terminated state with message: ${message.messageId}');
-        // Handle navigation or data based on the message
       }
     });
 
-    // Handle messages when the app is in the background but not terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('App opened from background with message: ${message.messageId}');
-      // Handle navigation or data based on the message
     });
   }
 }

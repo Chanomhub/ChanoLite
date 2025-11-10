@@ -15,9 +15,10 @@ class LocalNotificationService {
     await _notificationsPlugin.initialize(initializationSettings);
   }
 
-  static Future<void> showDownloadNotification({
+  static Future<void> showNotification({
     required String title,
     required String body,
+    String? payload,
   }) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
@@ -35,6 +36,7 @@ class LocalNotificationService {
       title,
       body,
       platformChannelSpecifics,
+      payload: payload,
     );
   }
 }
