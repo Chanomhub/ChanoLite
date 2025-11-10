@@ -1,12 +1,14 @@
-import 'package:applovin_max/applovin_max.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chanolite/managers/ad_manager.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/services/api/article_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'dart:async';
+
 
 import 'article_detail_screen.dart';
 import 'models/article_model.dart';
@@ -25,8 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
     viewportFraction: 0.86,
     keepPage: true,
   );
-  static const String _sdkKey = 'YOUR_APPLOVIN_SDK_KEY';
-  static const String _bannerAdUnitId = 'YOUR_BANNER_AD_UNIT_ID';
+
   List<Article> _articles = [];
   List<Article> _heroArticles = [];
   List<_CuratedSection> _curatedSections = [];
@@ -39,37 +40,29 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeAppLovin();
     _loadArticles();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final adManager = Provider.of<AdManager>(context);
+    adManager.showBannerAd();
+  }
+
+  @override
   void dispose() {
-    try {
-      AppLovinMAX.destroyBanner(_bannerAdUnitId);
-    } on MissingPluginException catch (error) {
-      debugPrint('AppLovin destroy failed: $error');
-    }
+    final adManager = Provider.of<AdManager>(context, listen: false);
+    adManager.destroyBannerAd();
     _heroPageController.dispose();
     super.dispose();
   }
 
-  Future<void> _initializeAppLovin() async {
-    try {
-      final configuration = await AppLovinMAX.initialize(_sdkKey);
-      if (configuration == null) {
-        return;
-      }
-      AppLovinMAX.loadBanner(_bannerAdUnitId);
-    } on MissingPluginException catch (error) {
-      debugPrint('AppLovin initialize failed: $error');
-    } catch (error, stackTrace) {
-      debugPrint('AppLovin initialize error: $error');
-      debugPrint('$stackTrace');
-    }
-  }
+
 
   Future<void> _loadArticles() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -87,16 +80,22 @@ class _HomeScreenState extends State<HomeScreen> {
       try {
         await attempt();
         return;
+      } on FormatException catch (error, stackTrace) {
+        lastError = 'Data format error';
+        debugPrint('Format error: $error');
+        debugPrint('Stack trace: $stackTrace');
+      } on TimeoutException catch (error, stackTrace) {
+        lastError = 'Connection timeout';
+        debugPrint('Timeout error: $error');
+        debugPrint('Stack trace: $stackTrace');
       } catch (error, stackTrace) {
         lastError = error;
         debugPrint('Home load attempt failed: $error');
-        debugPrint('$stackTrace');
+        debugPrint('Stack trace: $stackTrace');
       }
     }
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _error = lastError?.toString() ?? 'Failed to load articles.';
@@ -113,9 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
       status: status,
     );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _articles = response.articles;
@@ -136,6 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final published = List<Article>.from(_articles);
 
+    // Sort แยกกัน แต่ใช้ list เดิมเพื่อ performance
     final popular = List<Article>.from(published)
       ..sort((a, b) => b.favoritesCount.compareTo(a.favoritesCount));
     final recent = List<Article>.from(published)
@@ -158,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
 
+    // สร้าง tag sections
     final tagHighlights = _topItems((article) => article.tagList, limit: 4);
     _topTags = tagHighlights;
     for (final tag in tagHighlights) {
@@ -180,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // สร้าง platform sections
     final platformHighlights = _topItems(
           (article) => article.platformList,
       limit: 3,
@@ -250,36 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Flexible(child: Text('ChanoLite - Home')),
             const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade700,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '🎃',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Halloween 2025',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    '👻',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
+            _buildSeasonalBadge(),
           ],
         ),
         actions: [
@@ -290,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final hasAccounts = auth.accounts.isNotEmpty;
 
               Widget avatar;
-              if (user != null && (user.image ?? '').isNotEmpty) {
+              if (user != null && (user.image?.isNotEmpty ?? false)) {
                 avatar = CircleAvatar(
                   radius: 16,
                   backgroundImage: NetworkImage(user.image!),
@@ -323,7 +294,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       } else {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
                         );
                       }
                     },
@@ -342,6 +315,68 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildSeasonalBadge() {
+    final now = DateTime.now();
+
+    // Halloween badge (October)
+    if (now.month == 10) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade700,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('🎃', style: TextStyle(fontSize: 16)),
+            SizedBox(width: 6),
+            Text(
+              'Halloween 2025',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(width: 4),
+            Text('👻', style: TextStyle(fontSize: 14)),
+          ],
+        ),
+      );
+    }
+
+    // Christmas badge (December)
+    if (now.month == 12) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.red.shade700,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('🎄', style: TextStyle(fontSize: 16)),
+            SizedBox(width: 6),
+            Text(
+              'Christmas 2025',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(width: 4),
+            Text('🎅', style: TextStyle(fontSize: 14)),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
   Widget _buildBody() {
     if (_error != null && !_isLoading) {
       return Center(
@@ -350,7 +385,13 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 16),
-            Text('Error: $_error'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Error: $_error',
+                textAlign: TextAlign.center,
+              ),
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadArticles,
@@ -495,7 +536,8 @@ class _HomeScreenState extends State<HomeScreen> {
       chips.add(
         ActionChip(
           label: Text(platform),
-          onPressed: _isLoading ? null : () => _navigateToSearch(platform: platform),
+          onPressed:
+          _isLoading ? null : () => _navigateToSearch(platform: platform),
         ),
       );
     }
@@ -518,7 +560,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeroCarousel() {
-    final articles = _isLoading ? List.filled(3, Article.dummy()) : _heroArticles;
+    final articles =
+    _isLoading ? List.filled(3, Article.dummy()) : _heroArticles;
     return Padding(
       padding: const EdgeInsets.only(top: 20),
       child: SizedBox(
@@ -529,9 +572,7 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: articles.length,
           itemBuilder: (context, index) {
             final article = articles[index];
-            return RepaintBoundary(
-              child: _buildHeroCard(article),
-            );
+            return _buildHeroCard(article);
           },
         ),
       ),
@@ -539,9 +580,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeroCard(Article article) {
-    final imageUrl = article.coverImage ??
-        article.mainImage ??
-        article.backgroundImage;
+    final imageUrl = _getValidImageUrl(article);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -552,21 +591,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (imageUrl != null)
-                Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  cacheWidth: 800,
-                  cacheHeight: 450,
-                  filterQuality: FilterQuality.medium,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return _buildImageFallback();
-                  },
-                  errorBuilder: (context, error, stack) => _buildImageFallback(),
-                )
-              else
-                _buildImageFallback(),
+              _buildOptimizedImage(
+                imageUrl,
+                width: 800,
+                height: 450,
+              ),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -670,9 +699,7 @@ class _HomeScreenState extends State<HomeScreen> {
               physics: const ClampingScrollPhysics(),
               itemBuilder: (context, index) {
                 final article = section.articles[index];
-                return RepaintBoundary(
-                  child: _buildStoreCard(article),
-                );
+                return _buildStoreCard(article);
               },
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemCount: section.articles.length,
@@ -684,9 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildStoreCard(Article article) {
-    final imageUrl = article.coverImage ??
-        article.mainImage ??
-        article.backgroundImage;
+    final imageUrl = _getValidImageUrl(article);
 
     return SizedBox(
       width: 180,
@@ -707,21 +732,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
-                  child: imageUrl != null
-                      ? Image.network(
+                  child: _buildOptimizedImage(
                     imageUrl,
-                    fit: BoxFit.cover,
-                    cacheWidth: 360,
-                    cacheHeight: 203,
-                    filterQuality: FilterQuality.medium,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return _buildImageFallback();
-                    },
-                    errorBuilder: (context, error, stack) =>
-                        _buildImageFallback(),
-                  )
-                      : _buildImageFallback(),
+                    width: 360,
+                    height: 203,
+                  ),
                 ),
               ),
               Expanded(
@@ -764,6 +779,43 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  String? _getValidImageUrl(Article article) {
+    final candidates = [
+      article.coverImage,
+      article.mainImage,
+      article.backgroundImage,
+    ];
+
+    for (final url in candidates) {
+      if (url != null && url.isNotEmpty) {
+        return url;
+      }
+    }
+
+    return null;
+  }
+
+  Widget _buildOptimizedImage(
+      String? url, {
+        required int width,
+        required int height,
+      }) {
+    if (url == null || url.isEmpty) {
+      return _buildImageFallback();
+    }
+
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      memCacheWidth: width,
+      memCacheHeight: height,
+      placeholder: (context, url) => _buildImageFallback(),
+      errorWidget: (context, url, error) => _buildImageFallback(),
+      fadeInDuration: const Duration(milliseconds: 300),
+      fadeOutDuration: const Duration(milliseconds: 300),
     );
   }
 

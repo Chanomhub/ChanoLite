@@ -49,8 +49,22 @@ class AdManager {
       onAdExpandedCallback: (_) {},
       onAdCollapsedCallback: (_) {},
     ));
+  }
 
-    AppLovinMAX.loadBanner(config.bannerAdUnitId);
+  void showBannerAd() {
+    final config = _config;
+    if (!_initialized || config == null) {
+      return;
+    }
+    AppLovinMAX.showBanner(config.bannerAdUnitId);
+  }
+
+  void destroyBannerAd() {
+    final config = _config;
+    if (!_initialized || config == null) {
+      return;
+    }
+    AppLovinMAX.destroyBanner(config.bannerAdUnitId);
   }
 
   Future<void> preloadBanner() async {

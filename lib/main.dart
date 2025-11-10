@@ -3,6 +3,7 @@ import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:chanolite/game_library_screen.dart';
 import 'package:chanolite/home_screen.dart';
@@ -40,13 +41,15 @@ Future<void> main() async {
   await FirebaseMessaging.instance.subscribeToTopic('all');
   print('Subscribed to topic: all');
 
+  await dotenv.load(fileName: ".env");
+
   final adManager = AdManager(
-    configProvider: () async => const AdManagerConfig(
-      sdkKey: 'YOUR_APPLOVIN_SDK_KEY',
-      bannerAdUnitId: 'YOUR_BANNER_AD_UNIT_ID',
+    configProvider: () async => AdManagerConfig(
+      sdkKey: dotenv.env['APPLOVIN_SDK_KEY'] ?? '',
+      bannerAdUnitId: dotenv.env['BANNER_AD_UNIT_ID'] ?? '',
     ),
   );
-  unawaited(adManager.initialize());
+  await adManager.initialize();
 
   final downloadManager = DownloadManager();
   await downloadManager.loadTasks();
