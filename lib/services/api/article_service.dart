@@ -146,36 +146,27 @@ class ArticleService {
       }
     ''';
 
-    final articleResponse = await _apiClient.query(articleQueryString, variables: {'slug': slug}) as Map<String, dynamic>;
-    final articleJson = articleResponse['data']['article'] as Map<String, dynamic>;
-    final articleId = int.parse(articleJson['id']);
-
-    const String downloadsQueryString = r'''
-      query DownloadsQuery($articleId: Int!) {
-        downloads(articleId: $articleId) {
+    const String articleOnlyQuery = r'''
+      query ArticleQuery($slug: String) {
+        article(slug: $slug) {
           id
-          name
-          url
-          isActive
-          vipOnly
         }
       }
     ''';
+    final articleResponse = await _apiClient.query(articleOnlyQuery, variables: {'slug': slug}) as Map<String, dynamic>;
+    final articleId = int.parse(articleResponse['data']['article']['id']);
 
-    final downloadsResponse = await _apiClient.query(downloadsQueryString, variables: {'articleId': articleId}) as Map<String, dynamic>;
-    final downloadsJson = downloadsResponse['data']['downloads'];
-
-    articleJson['downloads'] = downloadsJson;
-
-    return Article.fromJson(articleJson);
-  }
-
-  Future<Article> getArticleById(int id) async {
-    const String articleQueryString = r'''
-      query ArticleQuery($id: Int!) {
-        article(id: $id) {
+    // Now, query both article details and downloads in a single request using the obtained articleId.
+    // This reduces the total API calls from three (article by slug, downloads by ID, article by ID)
+    // to two (article by slug to get ID, then combined article+downloads by ID).
+    // The ideal solution would be for the backend to allow querying downloads by slug directly,
+    // or to include downloads as a subfield of the article query.
+    const String combinedQueryString = r'''
+      query ArticleWithDownloads($id: Int!, $slug: String) {
+        article(id: $id, slug: $slug) {
           id
           slug
+          sequentialCode
           title
           description
           body
@@ -202,19 +193,15 @@ class ArticleService {
           platforms {
             name
           }
+          engine {
+            name
+          }
           favoritesCount
           createdAt
           updatedAt
         }
-      }
-    ''';
-
-    final articleResponse = await _apiClient.query(articleQueryString, variables: {'id': id}) as Map<String, dynamic>;
-    final articleJson = articleResponse['data']['article'] as Map<String, dynamic>;
-
-    const String downloadsQueryString = r'''
-      query DownloadsQuery($articleId: Int!) {
-        downloads(articleId: $articleId) {
+        downloads(articleId: $id) {
+          id
           name
           url
           isActive
@@ -223,8 +210,79 @@ class ArticleService {
       }
     ''';
 
-    final downloadsResponse = await _apiClient.query(downloadsQueryString, variables: {'articleId': id}) as Map<String, dynamic>;
-    final downloadsJson = downloadsResponse['data']['downloads'];
+    final response = await _apiClient.query(
+      combinedQueryString,
+      variables: {
+        'id': articleId,
+        'slug': slug, // Pass slug as well, in case the backend uses it for article details even with ID
+      },
+    ) as Map<String, dynamic>;
+
+    final articleJson = response['data']['article'] as Map<String, dynamic>;
+    final downloadsJson = response['data']['downloads'];
+
+    articleJson['downloads'] = downloadsJson;
+
+    return Article.fromJson(articleJson);
+  }
+
+  Future<Article> getArticleById(int id) async {
+    const String combinedQueryString = r'''
+      query ArticleWithDownloads($id: Int!) {
+        article(id: $id) {
+          id
+          slug
+          sequentialCode
+          title
+          description
+          body
+          status
+          ver
+          coverImage
+          backgroundImage
+          images {
+            url
+          }
+          author {
+            name
+            image
+          }
+          creators {
+            name
+          }
+          categories {
+            name
+          }
+          tags {
+            name
+          }
+          platforms {
+            name
+          }
+          engine {
+            name
+          }
+          favoritesCount
+          createdAt
+          updatedAt
+        }
+        downloads(articleId: $id) {
+          id
+          name
+          url
+          isActive
+          vipOnly
+        }
+      }
+    ''';
+
+    final response = await _apiClient.query(
+      combinedQueryString,
+      variables: {'id': id},
+    ) as Map<String, dynamic>;
+
+    final articleJson = response['data']['article'] as Map<String, dynamic>;
+    final downloadsJson = response['data']['downloads'];
 
     articleJson['downloads'] = downloadsJson;
 
