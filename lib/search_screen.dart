@@ -62,6 +62,8 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _filterPlatformController =
       TextEditingController();
   final TextEditingController _filterEngineController = TextEditingController();
+  final TextEditingController _filterSequentialCodeController =
+      TextEditingController();
 
   List<Article> _articles = [];
   int? _articlesCount;
@@ -77,6 +79,7 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _selectedPlatform;
   String? _selectedEngine;
   String? _selectedStatus;
+  String? _selectedSequentialCode;
 
   Timer? _debounce;
 
@@ -103,6 +106,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _filterCategoryController.dispose();
     _filterPlatformController.dispose();
     _filterEngineController.dispose();
+    _filterSequentialCodeController.dispose();
     super.dispose();
   }
 
@@ -161,7 +165,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     final query = _normalizeFilter(_searchController.text);
     final cacheKey =
-        'articles_search?q=$query&t=$_selectedTag&c=$_selectedCategory&p=$_selectedPlatform&e=$_selectedEngine&s=$_selectedStatus&l=$_limit&o=$_offset';
+        'articles_search?q=$query&t=$_selectedTag&c=$_selectedCategory&p=$_selectedPlatform&e=$_selectedEngine&s=$_selectedStatus&sc=$_selectedSequentialCode&l=$_limit&o=$_offset';
 
     try {
       if (reset) {
@@ -196,6 +200,7 @@ class _SearchScreenState extends State<SearchScreen> {
         platform: _selectedPlatform,
         engine: _selectedEngine,
         status: _selectedStatus,
+        sequentialCode: _selectedSequentialCode,
       );
 
       if (reset && response.articles.isNotEmpty) {
@@ -243,7 +248,8 @@ class _SearchScreenState extends State<SearchScreen> {
       (_selectedCategory?.isNotEmpty ?? false) ||
       (_selectedPlatform?.isNotEmpty ?? false) ||
       (_selectedEngine?.isNotEmpty ?? false) ||
-      (_selectedStatus?.isNotEmpty ?? false);
+      (_selectedStatus?.isNotEmpty ?? false) ||
+      (_selectedSequentialCode?.isNotEmpty ?? false);
 
   String? _normalizeFilter(String value) {
     final trimmed = value.trim();
@@ -267,6 +273,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _filterCategoryController.text = _selectedCategory ?? '';
     _filterPlatformController.text = _selectedPlatform ?? '';
     _filterEngineController.text = _selectedEngine ?? '';
+    _filterSequentialCodeController.text = _selectedSequentialCode ?? '';
     String statusValue = _selectedStatus ?? '';
 
     await showModalBottomSheet<void>(
@@ -356,6 +363,14 @@ class _SearchScreenState extends State<SearchScreen> {
                       },
                     ),
                     const SizedBox(height: 12),
+                    TextField(
+                      controller: _filterSequentialCodeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Sequential Code',
+                        hintText: 'e.g. HJ154',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: statusValue,
                       decoration: const InputDecoration(labelText: 'Status'),
@@ -385,6 +400,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               _filterCategoryController.clear();
                               _filterPlatformController.clear();
                               _filterEngineController.clear();
+                              _filterSequentialCodeController.clear();
                               statusValue = '';
                             });
                           },
@@ -409,6 +425,9 @@ class _SearchScreenState extends State<SearchScreen> {
                               );
                               _selectedEngine = _normalizeFilter(
                                 _filterEngineController.text,
+                              );
+                              _selectedSequentialCode = _normalizeFilter(
+                                _filterSequentialCodeController.text,
                               );
                               _selectedStatus = statusValue.isEmpty
                                   ? null
@@ -482,6 +501,17 @@ class _SearchScreenState extends State<SearchScreen> {
         _buildFilterChip('Status: ${_formatStatusLabel(_selectedStatus!)}', () {
           setState(() {
             _selectedStatus = null;
+          });
+          _loadArticles(reset: true);
+        }),
+      );
+    }
+
+    if (_selectedSequentialCode?.isNotEmpty ?? false) {
+      chips.add(
+        _buildFilterChip('Sequential Code: ${_selectedSequentialCode!}', () {
+          setState(() {
+            _selectedSequentialCode = null;
           });
           _loadArticles(reset: true);
         }),
