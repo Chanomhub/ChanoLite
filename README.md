@@ -39,11 +39,11 @@
 
 ChanoLite follows **Semantic Versioning** (SemVer) for version management. Current version: **1.2.4**
 
-| Component | Number | Range | Description | Example Changes |
-|-----------|--------|-------|-------------|-----------------|
-| **MAJOR** | `1` | - | Breaking changes that are not backward compatible<br/>Major structural or API changes | - Complete app restructure<br/>- Change minimum SDK version<br/>- Remove or change public APIs |
-| **MINOR** | `2` | 1-3 | New features that are backward compatible<br/>Add new capabilities | - Add new features<br/>- Major UI/UX improvements<br/>- Add new screens or modules<br/>- Deprecate functions (still usable) |
-| **PATCH** | `4` | 1-5 | Bug fixes and minor changes | - Fix bugs<br/>- Performance improvements<br/>- Fix typos<br/>- Update dependencies<br/>- Security patches |
+| Component | Range | Description | Example Changes |
+|-----------|-------|-------------|-----------------|
+| **MAJOR** | - | Breaking changes that are not backward compatible<br/>Major structural or API changes | - Complete app restructure<br/>- Change minimum SDK version<br/>- Remove or change public APIs |
+| **MINOR** | 1-3 | New features that are backward compatible<br/>Add new capabilities | - Add new features<br/>- Major UI/UX improvements<br/>- Add new screens or modules<br/>- Deprecate functions (still usable) |
+| **PATCH** | 1-5 | Bug fixes and minor changes | - Fix bugs<br/>- Performance improvements<br/>- Fix typos<br/>- Update dependencies<br/>- Security patches |
 
 ### 📊 Version Lifecycle Examples
 
