@@ -5,7 +5,7 @@
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
 ![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
-![Version](https://img.shields.io/badge/version-1.1.0-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.2.4-green?style=for-the-badge)
 
 **A Modern and Feature-Rich Flutter Application**
 
@@ -32,6 +32,32 @@
 - 📝 Markdown & HTML Rendering
 - 🎨 Flexible Theme System
 - 📲 AppLovin MAX Integration
+
+---
+
+## 📌 Version Guide (Semantic Versioning)
+
+ChanoLite follows **Semantic Versioning** (SemVer) for version management. Current version: **1.2.4**
+
+| Component | Range | Description | Example Changes |
+|-----------|-------|-------------|-----------------|
+| **MAJOR** | - | Breaking changes that are not backward compatible<br/>Major structural or API changes | - Complete app restructure<br/>- Change minimum SDK version<br/>- Remove or change public APIs |
+| **MINOR** | 1-3 | New features that are backward compatible<br/>Add new capabilities | - Add new features<br/>- Major UI/UX improvements<br/>- Add new screens or modules<br/>- Deprecate functions (still usable) |
+| **PATCH** | 1-5 | Bug fixes and minor changes | - Fix bugs<br/>- Performance improvements<br/>- Fix typos<br/>- Update dependencies<br/>- Security patches |
+
+### 📊 Version Lifecycle Examples
+
+```
+1.0.0 → 1.0.1 → 1.0.2 → 1.1.0 → 1.1.1 → 1.2.0 → 1.2.1 → 2.0.0
+  ↓       ↓       ↓       ↓       ↓       ↓       ↓       ↓
+Patch   Patch   Patch   Minor   Patch   Minor   Patch   MAJOR
+```
+
+### 🔄 When to Increment
+
+- **MAJOR (1.x.x → 2.0.0)**: When changes make old versions incompatible
+- **MINOR (x.2.x → x.3.0)**: After 3 increments or major feature addition → Prepare for MAJOR
+- **PATCH (x.x.4 → x.x.5)**: After 5 increments or minor fixes → Consider MINOR
 
 ---
 
@@ -114,6 +140,7 @@ We welcome contributions! Here's how you can help:
 - Write meaningful commit messages
 - Test your changes thoroughly
 - Update documentation as needed
+- Follow the versioning guide when releasing
 
 ---
 
@@ -143,6 +170,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### ⭐ If you like this project, please give it a star! ⭐
 
-**Made with Flutter 💙 • Version 1.1.0**
+**Made with ❤️ by Chanomhub**
 
 </div>
