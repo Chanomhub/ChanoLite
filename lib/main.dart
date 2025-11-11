@@ -3,11 +3,11 @@ import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 
 import 'package:chanolite/game_library_screen.dart';
 import 'package:chanolite/home_screen.dart';
-import 'package:chanolite/managers/ad_manager.dart';
+
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/screens/login_screen.dart';
@@ -41,20 +41,12 @@ Future<void> main() async {
   await FirebaseMessaging.instance.subscribeToTopic('all');
   print('Subscribed to topic: all');
 
-  await dotenv.load(fileName: ".env");
 
-  final adManager = AdManager(
-    configProvider: () async => AdManagerConfig(
-      sdkKey: dotenv.env['APPLOVIN_SDK_KEY'] ?? '',
-      bannerAdUnitId: dotenv.env['BANNER_AD_UNIT_ID'] ?? '',
-    ),
-  );
-  await adManager.initialize();
 
   final downloadManager = DownloadManager();
   await downloadManager.loadTasks();
 
-  runApp(MyApp(adManager: adManager, downloadManager: downloadManager));
+  runApp(MyApp(downloadManager: downloadManager));
 }
 
 Future<void> _requestNotificationPermission() async {
@@ -71,9 +63,9 @@ Future<void> _requestNotificationPermission() async {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, required this.adManager, required this.downloadManager});
+  const MyApp({super.key, required this.downloadManager});
 
-  final AdManager adManager;
+
   final DownloadManager downloadManager;
 
   @override
@@ -120,7 +112,6 @@ class _MyAppState extends State<MyApp> {
         Provider<CacheService>(create: (_) => CacheService()),
         ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: authManager),
-        Provider<AdManager>.value(value: widget.adManager),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,

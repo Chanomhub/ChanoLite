@@ -1,5 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:chanolite/managers/ad_manager.dart';
+
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';
@@ -44,19 +44,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final adManager = Provider.of<AdManager>(context);
-    adManager.showBannerAd();
-  }
-
-  @override
   void dispose() {
-    final adManager = Provider.of<AdManager>(context, listen: false);
-    adManager.destroyBannerAd();
     _heroPageController.dispose();
     super.dispose();
   }
+
+
 
 
 
