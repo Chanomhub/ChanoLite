@@ -1,3 +1,4 @@
+import 'package:chanolite/credits_screen.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';
@@ -193,6 +194,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   label: const Text('All Versions'),
                 ),
               ],
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Community',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.discord),
+                title: const Text('Go to Community'),
+                onTap: () => _openUpdateLink('https://discord.gg/QTmeKmKf2w'),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'About',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.code),
+                    title: const Text('Credits'),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CreditsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.description),
+                    title: const Text('View Licenses'),
+                    onTap: () {
+                      showLicensePage(
+                        context: context,
+                        applicationName: 'ChanoLite',
+                        applicationVersion: _appVersion,
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
