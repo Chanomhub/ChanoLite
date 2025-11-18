@@ -3,6 +3,7 @@ import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/services/api/article_service.dart';
 import 'package:chanolite/utils/url_helper.dart';
+import 'package:chanolite/utils/permission_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:intl/intl.dart';
@@ -244,9 +245,9 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   trailing: IconButton(
                     icon: const Icon(Icons.download),
                     onPressed: () async {
-                      final permissionStatus = await Permission.storage.request();
+                      final permissionStatus = await PermissionHelper.requestStoragePermission();
 
-                      if (permissionStatus.isGranted) {
+                      if (permissionStatus) {
                         final downloadManager = Provider.of<DownloadManager>(context, listen: false);
                         final authToken = Provider.of<AuthManager>(context, listen: false).activeAccount?.token;
 

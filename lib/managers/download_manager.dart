@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:chanolite/models/download_task.dart';
+import 'package:chanolite/utils/permission_helper.dart'; // Import the new permission helper
 import 'package:flutter/material.dart';
 import 'package:flutter_downloader/flutter_downloader.dart' as downloader;
 import 'package:path/path.dart' as path;
@@ -143,16 +144,29 @@ class DownloadManager extends ChangeNotifier {
       return;
     }
 
+    // Request storage permission
+    final hasPermission = await PermissionHelper.requestStoragePermission();
+    if (!hasPermission) {
+      print('Storage permission not granted. Cannot start download.');
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     String? savePath = prefs.getString(downloadPathKey);
 
     if (savePath == null) {
       if (Platform.isAndroid) {
-        savePath = '/storage/emulated/0/Download';
+        final directory = await getDownloadsDirectory(); // Use getDownloadsDirectory for Android
+        savePath = directory?.path;
       } else {
         final directory = await getApplicationDocumentsDirectory();
         savePath = directory.path;
       }
+    }
+
+    if (savePath == null) {
+      print('Could not determine a save path. Cannot start download.');
+      return;
     }
 
     final fileName = suggestedFilename ?? path.basename(url.split('?').first);
@@ -175,6 +189,7 @@ class DownloadManager extends ChangeNotifier {
             : {},
         showNotification: true,
         openFileFromNotification: true,
+        saveInPublicStorage: true, // Important for public access on newer Android versions
       );
 
       if (taskId != null) {

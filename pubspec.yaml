@@ -57,6 +57,7 @@ dependencies:
   firebase_analytics: ^12.0.1
   flutter_downloader: ^1.12.0
   permission_handler: ^12.0.1
+  device_info_plus: ^12.2.0
   flutter_local_notifications: ^19.5.0
   cached_network_image: ^3.4.1
 
@@ -65,7 +66,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
-  mockito: ^5.4.4
+  mockito: ^5.5.1
   build_runner: ^2.4.9
 
   # The "flutter_lints" package below contains a set of recommended lints to
