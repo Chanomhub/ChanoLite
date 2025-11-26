@@ -1,10 +1,14 @@
 // lib/search_screen.dart
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chanolite/services/api/article_service.dart';
 import 'package:chanolite/services/cache_service.dart';
+import 'package:chanolite/theme/app_theme.dart';
+import 'package:chanolite/theme/theme_notifier.dart';
 import 'package:chanolite/widgets/search_menu_component.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'article_detail_screen.dart';
 import 'models/article_model.dart';
@@ -554,35 +558,79 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         title: const Text('ChanoLite - Search'),
         actions: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade700,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '🎃',
-                  style: TextStyle(fontSize: 16),
+          Consumer<ThemeNotifier>(
+            builder: (context, notifier, child) {
+              final palette = notifier.currentPalette;
+              if (palette == SeasonalPalette.standard) {
+                return const SizedBox.shrink();
+              }
+
+              String text;
+              String iconStart;
+              String iconEnd;
+              Color color;
+
+              switch (palette) {
+                case SeasonalPalette.christmas:
+                  text = 'Christmas ${DateTime.now().year}';
+                  iconStart = '🎄';
+                  iconEnd = '🎅';
+                  color = Colors.red.shade700;
+                  break;
+                case SeasonalPalette.spooky:
+                  text = 'Halloween ${DateTime.now().year}';
+                  iconStart = '🎃';
+                  iconEnd = '👻';
+                  color = Colors.orange.shade700;
+                  break;
+                case SeasonalPalette.summer:
+                  text = 'Summer Vibes';
+                  iconStart = '☀️';
+                  iconEnd = '🏖️';
+                  color = Colors.orangeAccent.shade400;
+                  break;
+                case SeasonalPalette.festive:
+                  text = 'Festive Season';
+                  iconStart = '🎉';
+                  iconEnd = '✨';
+                  color = Colors.purple.shade700;
+                  break;
+                default:
+                  return const SizedBox.shrink();
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(right: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                SizedBox(width: 6),
-                Text(
-                  'Halloween 2025',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      iconStart,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      iconEnd,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 4),
-                Text(
-                  '👻',
-                  style: TextStyle(fontSize: 14),
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -660,19 +708,28 @@ class _SearchScreenState extends State<SearchScreen> {
               leading: imageUrl != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        imageUrl,
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl,
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 60,
-                            height: 60,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.article),
-                          );
-                        },
+                        memCacheWidth: 120, // 2x for retina
+                        memCacheHeight: 120,
+                        maxWidthDiskCache: 200, // Limit disk cache size
+                        maxHeightDiskCache: 200,
+                        fadeInDuration: const Duration(milliseconds: 100), // Faster fade
+                        placeholder: (context, url) => Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.article, color: Colors.black54),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.article, color: Colors.black54),
+                        ),
                       ),
                     )
                   : Container(

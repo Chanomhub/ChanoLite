@@ -84,11 +84,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
             Card(
               child: ListTile(
                 leading: CircleAvatar(
@@ -242,9 +243,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 

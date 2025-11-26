@@ -6,6 +6,7 @@ enum SeasonalPalette {
   festive,
   spooky,
   summer,
+  christmas,
 }
 
 class AppTheme {
@@ -69,9 +70,33 @@ class AppTheme {
         return FlexScheme.outerSpace;
       case SeasonalPalette.summer:
         return FlexScheme.mango;
+      case SeasonalPalette.christmas:
+        return FlexScheme.mandyRed;
       case SeasonalPalette.standard:
       default:
         return FlexScheme.deepPurple;
     }
+  }
+
+  static SeasonalPalette getSeasonalPalette(DateTime date) {
+    final month = date.month;
+    final day = date.day;
+
+    // Christmas: Dec 20 - Dec 31
+    if (month == 12 && day >= 20 && day <= 31) {
+      return SeasonalPalette.christmas;
+    }
+
+    // Halloween: Oct 25 - Oct 31
+    if (month == 10 && day >= 25 && day <= 31) {
+      return SeasonalPalette.spooky;
+    }
+
+    // Summer: Jun 1 - Aug 31 (Example)
+    if (month >= 6 && month <= 8) {
+      return SeasonalPalette.summer;
+    }
+
+    return SeasonalPalette.standard;
   }
 }

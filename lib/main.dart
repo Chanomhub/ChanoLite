@@ -13,7 +13,9 @@ import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/search_screen.dart';
 import 'package:chanolite/settings_screen.dart';
+import 'package:chanolite/settings_screen.dart';
 import 'package:chanolite/theme/app_theme.dart';
+import 'package:chanolite/theme/theme_notifier.dart';
 import 'package:chanolite/widgets/global_download_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -105,23 +107,27 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    const palette = SeasonalPalette.spooky;
     final authManager = AuthManager()..load();
     return MultiProvider(
       providers: [
         Provider<CacheService>(create: (_) => CacheService()),
         ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: authManager),
+        ChangeNotifierProvider(create: (_) => ThemeNotifier(ThemeMode.dark)),
       ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        title: 'ChanoLite',
-        theme: AppTheme.light(palette: palette),
-        darkTheme: AppTheme.dark(palette: palette),
-        themeMode: ThemeMode.dark,
-        home: const AuthGate(),
-        routes: {
-          '/login': (_) => const LoginScreen(),
+      child: Consumer<ThemeNotifier>(
+        builder: (context, themeNotifier, child) {
+          return MaterialApp(
+            navigatorKey: navigatorKey,
+            title: 'ChanoLite',
+            theme: AppTheme.light(palette: themeNotifier.currentPalette),
+            darkTheme: AppTheme.dark(palette: themeNotifier.currentPalette),
+            themeMode: themeNotifier.themeMode,
+            home: const AuthGate(),
+            routes: {
+              '/login': (_) => const LoginScreen(),
+            },
+          );
         },
       ),
     );
