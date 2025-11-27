@@ -177,6 +177,58 @@ class Article {
     };
   }
 
+  Article copyWith({
+    int? id,
+    String? title,
+    String? slug,
+    String? description,
+    String? body,
+    dynamic ver,
+    int? version,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? status,
+    String? engine,
+    dynamic mainImage,
+    List<String>? images,
+    dynamic backgroundImage,
+    dynamic coverImage,
+    List<String>? tagList,
+    List<String>? categoryList,
+    List<String>? platformList,
+    Author? author,
+    bool? favorited,
+    int? favoritesCount,
+    dynamic sequentialCode,
+    List<Download>? downloads,
+  }) {
+    return Article(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      slug: slug ?? this.slug,
+      description: description ?? this.description,
+      body: body ?? this.body,
+      ver: ver ?? this.ver,
+      version: version ?? this.version,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      status: status ?? this.status,
+      engine: engine ?? this.engine,
+      mainImage: mainImage ?? this.mainImage,
+      images: images ?? this.images,
+      backgroundImage: backgroundImage ?? this.backgroundImage,
+      coverImage: coverImage ?? this.coverImage,
+      tagList: tagList ?? this.tagList,
+      categoryList: categoryList ?? this.categoryList,
+      platformList: platformList ?? this.platformList,
+      author: author ?? this.author,
+      favorited: favorited ?? this.favorited,
+      favoritesCount: favoritesCount ?? this.favoritesCount,
+      sequentialCode: sequentialCode ?? this.sequentialCode,
+      downloads: downloads ?? this.downloads,
+    );
+  }
+
   factory Article.dummy() {
     return Article(
       id: 0,

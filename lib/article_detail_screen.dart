@@ -1,7 +1,8 @@
 import 'package:chanolite/game_library_screen.dart';
+import 'package:chanolite/managers/article_detail_manager.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
-import 'package:chanolite/services/api/article_service.dart';
+import 'package:chanolite/repositories/article_repository.dart';
 import 'package:chanolite/utils/url_helper.dart';
 import 'package:chanolite/utils/permission_helper.dart';
 import 'package:flutter/material.dart';
@@ -14,112 +15,63 @@ import 'models/article_model.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-class ArticleDetailScreen extends StatefulWidget {
+class ArticleDetailScreen extends StatelessWidget {
   final Article article;
 
   const ArticleDetailScreen({super.key, required this.article});
 
   @override
-  State<ArticleDetailScreen> createState() => _ArticleDetailScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) => ArticleDetailManager(
+        repository: Provider.of<ArticleRepository>(context, listen: false),
+        cacheService: Provider.of<CacheService>(context, listen: false),
+      )..loadArticle(article),
+      child: const _ArticleDetailContent(),
+    );
+  }
 }
 
-class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
-  late Article _article;
-  bool _isFetchingDetails = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _article = widget.article;
-    print('Initializing ArticleDetailScreen for article: ${widget.article.slug}');
-    _loadArticle();
-  }
-
-  Future<void> _loadArticle() async {
-    final cache = Provider.of<CacheService>(context, listen: false);
-    final cacheKey = 'article_${widget.article.id}';
-
-    // Try to get from cache first
-    final cachedArticle = cache.get(cacheKey);
-    if (cachedArticle != null && cachedArticle is Article) {
-      if (mounted) {
-        setState(() {
-          _article = cachedArticle;
-          _isFetchingDetails = false;
-        });
-        print('Article loaded from CACHE: ${_article.title}');
-      }
-      return;
-    }
-
-    // If not in cache, fetch from network
-    try {
-      Article article;
-      if (widget.article.slug != null && widget.article.slug!.isNotEmpty) {
-        article = await ArticleService().getArticleBySlug(widget.article.slug);
-      } else {
-        article = await ArticleService().getArticleById(widget.article.id);
-      }
-
-      if (mounted) {
-        // Save to cache before setting state
-        cache.set(cacheKey, article);
-        
-        setState(() {
-          _article = article;
-          _isFetchingDetails = false;
-        });
-        print('Article loaded from NETWORK: ${_article.title}');
-      }
-    } catch (e, stackTrace) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isFetchingDetails = false;
-        });
-        print('Error loading article: $e');
-        print(stackTrace);
-      }
-    }
-  }
-
+class _ArticleDetailContent extends StatelessWidget {
+  const _ArticleDetailContent();
 
   @override
   Widget build(BuildContext context) {
-    print('Building ArticleDetailScreen: isFetchingDetails: $_isFetchingDetails, error: $_error, article: ${_article.title}');
-    
-    // We no longer block the UI with a loading screen since we have initial data.
-    // However, if there was a critical error fetching details AND we somehow have no data (unlikely given widget.article),
-    // we might want to show something. But generally, we show what we have.
+    final manager = Provider.of<ArticleDetailManager>(context);
+    final article = manager.article;
+
+    // If for some reason article is null (shouldn't happen given the structure), show loading
+    if (article == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          _buildSliverAppBar(context),
+          _buildSliverAppBar(context, article),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildAuthorInfo(context),
+                  _buildAuthorInfo(context, article),
                   const SizedBox(height: 16),
-                  _buildTags(context),
+                  _buildTags(context, article),
                   const SizedBox(height: 16),
                   Text('Description', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
-                  Text(_article.description, style: Theme.of(context).textTheme.bodyMedium),
+                  Text(article.description, style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 16),
-                  _buildDownloadSection(context),
+                  _buildDownloadSection(context, manager),
                   const SizedBox(height: 16),
                   Text('Body', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
-                  Html(data: _article.body),
+                  Html(data: article.body),
                   const SizedBox(height: 16),
-                  _buildImageGallery(context),
+                  _buildImageGallery(context, article),
                   const SizedBox(height: 16),
-                  _buildInfoTable(context),
+                  _buildInfoTable(context, article),
                 ],
               ),
             ),
@@ -129,16 +81,16 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     );
   }
 
-  Widget _buildSliverAppBar(BuildContext context) {
+  Widget _buildSliverAppBar(BuildContext context, Article article) {
     return SliverAppBar(
       expandedHeight: 250.0,
       floating: false,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
-        title: Text(_article.title, style: const TextStyle(fontSize: 16.0)),
-        background: _article.coverImage != null
+        title: Text(article.title, style: const TextStyle(fontSize: 16.0)),
+        background: article.coverImage != null
             ? CachedNetworkImage(
-                imageUrl: _article.coverImage!,
+                imageUrl: article.coverImage!,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(color: Colors.grey[300]),
                 errorWidget: (context, url, error) => const Icon(Icons.image),
@@ -148,34 +100,34 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     );
   }
 
-  Widget _buildAuthorInfo(BuildContext context) {
+  Widget _buildAuthorInfo(BuildContext context, Article article) {
     return Row(
       children: [
         CircleAvatar(
-          backgroundImage: _article.author.image != null ? CachedNetworkImageProvider(_article.author.image!) : null,
+          backgroundImage: article.author.image != null ? CachedNetworkImageProvider(article.author.image!) : null,
           onBackgroundImageError: (exception, stackTrace) {},
-          child: _article.author.image == null ? const Icon(Icons.person) : null,
+          child: article.author.image == null ? const Icon(Icons.person) : null,
         ),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_article.author.name, style: Theme.of(context).textTheme.titleMedium),
-            Text(DateFormat.yMMMd().format(_article.createdAt), style: Theme.of(context).textTheme.bodySmall),
+            Text(article.author.name, style: Theme.of(context).textTheme.titleMedium),
+            Text(DateFormat.yMMMd().format(article.createdAt), style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
         const Spacer(),
         IconButton(
-          icon: Icon(_article.favorited ? Icons.favorite : Icons.favorite_border),
-          color: _article.favorited ? Colors.red : null,
+          icon: Icon(article.favorited ? Icons.favorite : Icons.favorite_border),
+          color: article.favorited ? Colors.red : null,
           onPressed: () { /* Handle favorite */ },
         ),
-        Text(_article.favoritesCount.toString()),
+        Text(article.favoritesCount.toString()),
       ],
     );
   }
 
-  Widget _buildTags(BuildContext context) {
+  Widget _buildTags(BuildContext context, Article article) {
     final theme = Theme.of(context);
     Color getColor(String text) {
       // Simple hash to get a color from a predefined list
@@ -203,38 +155,39 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       spacing: 8.0,
       runSpacing: 4.0,
       children: [
-        ..._article.tagList.map((tag) => Chip(label: Text(tag))),
-        ..._article.categoryList.map((category) => buildChip(category, getColor(category))),
-        ..._article.platformList.map((platform) => buildChip(platform, getColor(platform))),
+        ...article.tagList.map((tag) => Chip(label: Text(tag))),
+        ...article.categoryList.map((category) => buildChip(category, getColor(category))),
+        ...article.platformList.map((platform) => buildChip(platform, getColor(platform))),
       ],
     );
   }
 
-  Widget _buildDownloadSection(BuildContext context) {
+  Widget _buildDownloadSection(BuildContext context, ArticleDetailManager manager) {
+    final article = manager.article!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Downloads', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        if (_isFetchingDetails && _article.downloads.isEmpty)
+        if (manager.isLoading && article.downloads.isEmpty)
           const Padding(
             padding: EdgeInsets.all(16.0),
             child: Center(child: CircularProgressIndicator()),
           )
-        else if (_error != null && _article.downloads.isEmpty)
+        else if (manager.error != null && article.downloads.isEmpty)
            Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text('Failed to load downloads: $_error', style: const TextStyle(color: Colors.red)),
+            child: Text('Failed to load downloads: ${manager.error}', style: const TextStyle(color: Colors.red)),
           )
-        else if (_article.downloads.isEmpty)
+        else if (article.downloads.isEmpty)
           const Center(child: Text('No download links available.'))
         else
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _article.downloads.length,
+            itemCount: article.downloads.length,
             itemBuilder: (context, index) {
-              final link = _article.downloads[index];
+              final link = article.downloads[index];
               return Card(
                 child: ListTile(
                   title: Text(link.name),
@@ -324,16 +277,16 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     );
   }
 
-  Widget _buildImageGallery(BuildContext context) {
+  Widget _buildImageGallery(BuildContext context, Article article) {
     return SizedBox(
       height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _article.images.length,
+        itemCount: article.images.length,
         itemBuilder: (context, index) {
           return Card(
             child: CachedNetworkImage(
-              imageUrl: _article.images[index],
+              imageUrl: article.images[index],
               fit: BoxFit.cover,
               placeholder: (context, url) => Container(color: Colors.grey[300]),
               errorWidget: (context, url, error) => const Icon(Icons.image),
@@ -344,7 +297,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     );
   }
 
-  Widget _buildInfoTable(BuildContext context) {
+  Widget _buildInfoTable(BuildContext context, Article article) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -356,13 +309,13 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             1: FlexColumnWidth(),
           },
           children: [
-            _buildInfoTableRow('ID', _article.id.toString()),
-            _buildInfoTableRow('Sequential Code', _article.sequentialCode ?? 'N/A'),
-            _buildInfoTableRow('Engine', _article.engine ?? 'N/A'),
-            _buildInfoTableRow('Version', _article.ver ?? 'N/A'),
-            _buildInfoTableRow('Status', _article.status),
-            _buildInfoTableRow('Created At', DateFormat.yMMMd().format(_article.createdAt)),
-            _buildInfoTableRow('Updated At', DateFormat.yMMMd().format(_article.updatedAt)),
+            _buildInfoTableRow('ID', article.id.toString()),
+            _buildInfoTableRow('Sequential Code', article.sequentialCode ?? 'N/A'),
+            _buildInfoTableRow('Engine', article.engine ?? 'N/A'),
+            _buildInfoTableRow('Version', article.ver ?? 'N/A'),
+            _buildInfoTableRow('Status', article.status),
+            _buildInfoTableRow('Created At', DateFormat.yMMMd().format(article.createdAt)),
+            _buildInfoTableRow('Updated At', DateFormat.yMMMd().format(article.updatedAt)),
           ],
         ),
       ],

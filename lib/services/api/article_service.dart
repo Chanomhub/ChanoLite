@@ -1,4 +1,5 @@
 import 'package:chanolite/models/article_model.dart';
+import 'package:chanolite/models/download.dart';
 import 'api_client.dart';
 
 class ArticleService {
@@ -287,5 +288,27 @@ class ArticleService {
     articleJson['downloads'] = downloadsJson;
 
     return Article.fromJson(articleJson);
+  }
+
+  Future<List<Download>> getDownloads(int articleId) async {
+    const String query = r'''
+      query GetDownloads($articleId: Int!) {
+        downloads(articleId: $articleId) {
+          id
+          name
+          url
+          isActive
+          vipOnly
+        }
+      }
+    ''';
+
+    final response = await _apiClient.query(
+      query,
+      variables: {'articleId': articleId},
+    ) as Map<String, dynamic>;
+
+    final downloadsJson = response['data']['downloads'] as List;
+    return downloadsJson.map((e) => Download.fromJson(e)).toList();
   }
 }

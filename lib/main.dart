@@ -24,6 +24,7 @@ import 'package:chanolite/services/local_notification_service.dart';
 import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/article_detail_screen.dart';
 import 'package:chanolite/models/article_model.dart';
+import 'package:chanolite/repositories/article_repository.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -111,6 +112,7 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         Provider<CacheService>(create: (_) => CacheService()),
+        Provider<ArticleRepository>(create: (_) => ArticleRepository()),
         ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: authManager),
         ChangeNotifierProvider(create: (_) => ThemeNotifier(ThemeMode.dark)),
