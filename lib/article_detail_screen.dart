@@ -12,6 +12,7 @@ import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/services/local_notification_service.dart';
 import 'models/article_model.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
   final Article article;
@@ -23,13 +24,14 @@ class ArticleDetailScreen extends StatefulWidget {
 }
 
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
-  Article? _article;
-  bool _isLoading = true;
+  late Article _article;
+  bool _isFetchingDetails = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _article = widget.article;
     print('Initializing ArticleDetailScreen for article: ${widget.article.slug}');
     _loadArticle();
   }
@@ -44,9 +46,9 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       if (mounted) {
         setState(() {
           _article = cachedArticle;
-          _isLoading = false;
+          _isFetchingDetails = false;
         });
-        print('Article loaded from CACHE: ${_article?.title}');
+        print('Article loaded from CACHE: ${_article.title}');
       }
       return;
     }
@@ -66,15 +68,15 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         
         setState(() {
           _article = article;
-          _isLoading = false;
+          _isFetchingDetails = false;
         });
-        print('Article loaded from NETWORK: ${_article?.title}');
+        print('Article loaded from NETWORK: ${_article.title}');
       }
     } catch (e, stackTrace) {
       if (mounted) {
         setState(() {
           _error = e.toString();
-          _isLoading = false;
+          _isFetchingDetails = false;
         });
         print('Error loading article: $e');
         print(stackTrace);
@@ -85,27 +87,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('Building ArticleDetailScreen: isLoading: $_isLoading, error: $_error, article: ${_article?.title}');
-    if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: Text(widget.article.title)),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_error != null) {
-      return Scaffold(
-        appBar: AppBar(title: Text(widget.article.title)),
-        body: Center(child: Text('Error: $_error')),
-      );
-    }
-
-    if (_article == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text(widget.article.title)),
-        body: const Center(child: Text('Article not found.')),
-      );
-    }
+    print('Building ArticleDetailScreen: isFetchingDetails: $_isFetchingDetails, error: $_error, article: ${_article.title}');
+    
+    // We no longer block the UI with a loading screen since we have initial data.
+    // However, if there was a critical error fetching details AND we somehow have no data (unlikely given widget.article),
+    // we might want to show something. But generally, we show what we have.
 
     return Scaffold(
       body: CustomScrollView(
@@ -123,13 +109,13 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   const SizedBox(height: 16),
                   Text('Description', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
-                  Text(_article!.description ?? '', style: Theme.of(context).textTheme.bodyMedium),
+                  Text(_article.description, style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 16),
                   _buildDownloadSection(context),
                   const SizedBox(height: 16),
                   Text('Body', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
-                  Html(data: _article!.body ?? ''),
+                  Html(data: _article.body),
                   const SizedBox(height: 16),
                   _buildImageGallery(context),
                   const SizedBox(height: 16),
@@ -149,12 +135,13 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       floating: false,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
-        title: Text(_article!.title, style: const TextStyle(fontSize: 16.0)),
-        background: _article!.coverImage != null
-            ? Image.network(
-                _article!.coverImage!,
+        title: Text(_article.title, style: const TextStyle(fontSize: 16.0)),
+        background: _article.coverImage != null
+            ? CachedNetworkImage(
+                imageUrl: _article.coverImage!,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.image),
+                placeholder: (context, url) => Container(color: Colors.grey[300]),
+                errorWidget: (context, url, error) => const Icon(Icons.image),
               )
             : const Icon(Icons.image),
       ),
@@ -165,25 +152,25 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     return Row(
       children: [
         CircleAvatar(
-          backgroundImage: _article!.author.image != null ? NetworkImage(_article!.author.image!) : null,
+          backgroundImage: _article.author.image != null ? CachedNetworkImageProvider(_article.author.image!) : null,
           onBackgroundImageError: (exception, stackTrace) {},
-          child: _article!.author.image == null ? const Icon(Icons.person) : null,
+          child: _article.author.image == null ? const Icon(Icons.person) : null,
         ),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_article!.author.name, style: Theme.of(context).textTheme.titleMedium),
-            Text(DateFormat.yMMMd().format(_article!.createdAt), style: Theme.of(context).textTheme.bodySmall),
+            Text(_article.author.name, style: Theme.of(context).textTheme.titleMedium),
+            Text(DateFormat.yMMMd().format(_article.createdAt), style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
         const Spacer(),
         IconButton(
-          icon: Icon(_article!.favorited ? Icons.favorite : Icons.favorite_border),
-          color: _article!.favorited ? Colors.red : null,
+          icon: Icon(_article.favorited ? Icons.favorite : Icons.favorite_border),
+          color: _article.favorited ? Colors.red : null,
           onPressed: () { /* Handle favorite */ },
         ),
-        Text(_article!.favoritesCount.toString()),
+        Text(_article.favoritesCount.toString()),
       ],
     );
   }
@@ -216,9 +203,9 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       spacing: 8.0,
       runSpacing: 4.0,
       children: [
-        ..._article!.tagList.map((tag) => Chip(label: Text(tag))),
-        ..._article!.categoryList.map((category) => buildChip(category, getColor(category))),
-        ..._article!.platformList.map((platform) => buildChip(platform, getColor(platform))),
+        ..._article.tagList.map((tag) => Chip(label: Text(tag))),
+        ..._article.categoryList.map((category) => buildChip(category, getColor(category))),
+        ..._article.platformList.map((platform) => buildChip(platform, getColor(platform))),
       ],
     );
   }
@@ -229,15 +216,25 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       children: [
         Text('Downloads', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        if (_article!.downloads.isEmpty)
+        if (_isFetchingDetails && _article.downloads.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_error != null && _article.downloads.isEmpty)
+           Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text('Failed to load downloads: $_error', style: const TextStyle(color: Colors.red)),
+          )
+        else if (_article.downloads.isEmpty)
           const Center(child: Text('No download links available.'))
         else
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _article!.downloads.length,
+            itemCount: _article.downloads.length,
             itemBuilder: (context, index) {
-              final link = _article!.downloads[index];
+              final link = _article.downloads[index];
               return Card(
                 child: ListTile(
                   title: Text(link.name),
@@ -332,13 +329,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _article!.images.length,
+        itemCount: _article.images.length,
         itemBuilder: (context, index) {
           return Card(
-            child: Image.network(
-              _article!.images[index],
+            child: CachedNetworkImage(
+              imageUrl: _article.images[index],
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.image),
+              placeholder: (context, url) => Container(color: Colors.grey[300]),
+              errorWidget: (context, url, error) => const Icon(Icons.image),
             ),
           );
         },
@@ -358,13 +356,13 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             1: FlexColumnWidth(),
           },
           children: [
-            _buildInfoTableRow('ID', _article!.id.toString()),
-            _buildInfoTableRow('Sequential Code', _article!.sequentialCode ?? 'N/A'),
-            _buildInfoTableRow('Engine', _article!.engine ?? 'N/A'),
-            _buildInfoTableRow('Version', _article!.ver ?? 'N/A'),
-            _buildInfoTableRow('Status', _article!.status ?? 'N/A'),
-            _buildInfoTableRow('Created At', DateFormat.yMMMd().format(_article!.createdAt)),
-            _buildInfoTableRow('Updated At', DateFormat.yMMMd().format(_article!.updatedAt)),
+            _buildInfoTableRow('ID', _article.id.toString()),
+            _buildInfoTableRow('Sequential Code', _article.sequentialCode ?? 'N/A'),
+            _buildInfoTableRow('Engine', _article.engine ?? 'N/A'),
+            _buildInfoTableRow('Version', _article.ver ?? 'N/A'),
+            _buildInfoTableRow('Status', _article.status),
+            _buildInfoTableRow('Created At', DateFormat.yMMMd().format(_article.createdAt)),
+            _buildInfoTableRow('Updated At', DateFormat.yMMMd().format(_article.updatedAt)),
           ],
         ),
       ],
