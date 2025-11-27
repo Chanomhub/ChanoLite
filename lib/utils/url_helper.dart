@@ -94,10 +94,20 @@ class InAppBrowserHelper extends InAppBrowser {
         required DownloadManager downloadManager,
         String? authToken,
         required void Function(DownloadStartRequest) onDownloadStart,
+        bool useExternalBrowser = false,
       }
       ) async {
     final uri = Uri.tryParse(url);
     if (uri == null) {
+      return;
+    }
+
+    if (useExternalBrowser) {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        debugPrint('Could not launch $url');
+      }
       return;
     }
 

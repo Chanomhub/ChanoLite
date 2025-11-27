@@ -201,64 +201,43 @@ class _ArticleDetailContent extends StatelessWidget {
                         final downloadManager = Provider.of<DownloadManager>(context, listen: false);
                         final authToken = Provider.of<AuthManager>(context, listen: false).activeAccount?.token;
 
-                        InAppBrowserHelper.openUrl(
-                          link.url,
-                          downloadManager: downloadManager,
-                          authToken: authToken,
-                                                  onDownloadStart: (downloadStartRequest) async {
-                                                    await LocalNotificationService.showNotification(
-                                                      title: 'Download Detected',
-                                                      body: 'A download has been detected and will begin shortly.',
-                                                    );
-                          
-                                                    final fileName = InAppBrowserHelper.extractFilename(downloadStartRequest.contentDisposition) ??
-                                                        InAppBrowserHelper.getFilenameFromUrl(downloadStartRequest.url) ??
-                                                        downloadStartRequest.suggestedFilename;
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext dialogContext) {
-                                return AlertDialog(
-                                  title: const Text('Confirm Download'),
-                                  content: Text('Do you want to download this file?\n\n$fileName'),
-                                  actions: <Widget>[
-                                    TextButton(
-                                      child: const Text('Cancel'),
-                                      onPressed: () {
-                                        Navigator.of(dialogContext).pop();
-                                      },
-                                    ),
-                                    TextButton(
-                                      child: const Text('Download'),
-                                      onPressed: () {
-                                        Navigator.of(dialogContext).pop();
-                                        downloadManager.startDownload(
-                                          downloadStartRequest.url.toString(),
-                                          suggestedFilename: fileName,
-                                          authToken: authToken,
-                                          imageUrl: article.coverImage ?? article.mainImage,
-                                          version: article.ver?.toString(),
-                                        );
-
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: const Text('Download started!'),
-                                            action: SnackBarAction(
-                                              label: 'GO TO LIBRARY',
-                                              onPressed: () {
-                                                Navigator.of(context).push(
-                                                  MaterialPageRoute(
-                                                    builder: (context) => const GameLibraryScreen(),
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                );
-                              },
+                        // Show dialog to choose browser
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text('Open Link'),
+                              content: const Text('Choose how you want to open this link.'),
+                              actions: <Widget>[
+                                TextButton(
+                                  child: const Text('External Browser'),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                    _openLink(
+                                      context,
+                                      link.url,
+                                      downloadManager,
+                                      authToken,
+                                      article,
+                                      useExternalBrowser: true,
+                                    );
+                                  },
+                                ),
+                                TextButton(
+                                  child: const Text('In-App Browser'),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                    _openLink(
+                                      context,
+                                      link.url,
+                                      downloadManager,
+                                      authToken,
+                                      article,
+                                      useExternalBrowser: false,
+                                    );
+                                  },
+                                ),
+                              ],
                             );
                           },
                         );
@@ -336,6 +315,81 @@ class _ArticleDetailContent extends StatelessWidget {
           child: Text(value),
         ),
       ],
+    );
+  }
+
+  void _openLink(
+    BuildContext context,
+    String url,
+    DownloadManager downloadManager,
+    String? authToken,
+    Article article, {
+    required bool useExternalBrowser,
+  }) {
+    InAppBrowserHelper.openUrl(
+      url,
+      downloadManager: downloadManager,
+      authToken: authToken,
+      useExternalBrowser: useExternalBrowser,
+      onDownloadStart: (downloadStartRequest) async {
+        await LocalNotificationService.showNotification(
+          title: 'Download Detected',
+          body: 'A download has been detected and will begin shortly.',
+        );
+
+        final fileName = InAppBrowserHelper.extractFilename(downloadStartRequest.contentDisposition) ??
+            InAppBrowserHelper.getFilenameFromUrl(downloadStartRequest.url) ??
+            downloadStartRequest.suggestedFilename;
+        
+        if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (BuildContext dialogContext) {
+                return AlertDialog(
+                  title: const Text('Confirm Download'),
+                  content: Text('Do you want to download this file?\n\n$fileName'),
+                  actions: <Widget>[
+                    TextButton(
+                      child: const Text('Cancel'),
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                      },
+                    ),
+                    TextButton(
+                      child: const Text('Download'),
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        downloadManager.startDownload(
+                          downloadStartRequest.url.toString(),
+                          suggestedFilename: fileName,
+                          authToken: authToken,
+                          imageUrl: article.coverImage ?? article.mainImage,
+                          version: article.ver?.toString(),
+                        );
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Download started!'),
+                            action: SnackBarAction(
+                              label: 'GO TO LIBRARY',
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const GameLibraryScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                );
+              },
+            );
+        }
+      },
     );
   }
 }
