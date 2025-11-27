@@ -22,6 +22,30 @@ class FileOpenerService {
       } catch (e) {
         print('FileOpenerService: Error listing files: $e');
       }
+
+      // Check public Downloads folder
+      final fileName = filePath.split(Platform.pathSeparator).last;
+      final publicDownloadPath = '/storage/emulated/0/Download/$fileName';
+      print('FileOpenerService: Checking public download path: $publicDownloadPath');
+      if (await File(publicDownloadPath).exists()) {
+        print('FileOpenerService: Found file at public path: $publicDownloadPath');
+        filePath = publicDownloadPath;
+      } else {
+        // List public downloads to see if it's there with a different name
+        try {
+          final publicDir = Directory('/storage/emulated/0/Download');
+          if (await publicDir.exists()) {
+             print('FileOpenerService: Listing public downloads:');
+             await for (final entity in publicDir.list()) {
+               if (entity.path.contains(fileName)) {
+                 print(' - MATCH: ${entity.path}');
+               }
+             }
+          }
+        } catch (e) {
+          print('FileOpenerService: Error listing public downloads: $e');
+        }
+      }
     } else {
       print('FileOpenerService: File exists at path: $filePath');
     }
