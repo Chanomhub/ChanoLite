@@ -21,6 +21,8 @@ class DownloadTask {
   final String? fileName;
   final DownloadType type;
   final String? taskId; // ✨ เพิ่มฟิลด์นี้สำหรับ flutter_downloader
+  final String? imageUrl;
+  final String? version;
 
   DownloadTask({
     required this.url,
@@ -30,6 +32,8 @@ class DownloadTask {
     this.fileName,
     this.type = DownloadType.file,
     this.taskId, // ✨ เพิ่มใน constructor
+    this.imageUrl,
+    this.version,
   });
 
   DownloadTask copyWith({
@@ -39,6 +43,8 @@ class DownloadTask {
     String? fileName,
     DownloadType? type,
     String? taskId, // ✨ เพิ่มใน copyWith
+    String? imageUrl,
+    String? version,
   }) {
     return DownloadTask(
       url: url,
@@ -48,6 +54,8 @@ class DownloadTask {
       fileName: fileName ?? this.fileName,
       type: type ?? this.type,
       taskId: taskId ?? this.taskId, // ✨ เพิ่มที่นี่
+      imageUrl: imageUrl ?? this.imageUrl,
+      version: version ?? this.version,
     );
   }
 
@@ -60,6 +68,8 @@ class DownloadTask {
       fileName: json['fileName'] as String?,
       type: _typeFromName(json['type'] as String?),
       taskId: json['taskId'] as String?, // ✨ เพิ่มการ deserialize
+      imageUrl: json['imageUrl'] as String?,
+      version: json['version'] as String?,
     );
   }
 
@@ -72,6 +82,8 @@ class DownloadTask {
       'fileName': fileName,
       'type': type.name,
       'taskId': taskId, // ✨ เพิ่มการ serialize
+      'imageUrl': imageUrl,
+      'version': version,
     };
   }
 

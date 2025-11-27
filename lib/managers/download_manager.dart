@@ -21,7 +21,7 @@ class DownloadManager extends ChangeNotifier {
   );
 
   static const String downloadPathKey = 'download_path';
-  static const String downloadTasksKey = 'download_tasks';
+  static const String metadataKey = 'download_metadata';
 
   List<DownloadTask> get tasks => _tasks;
 
@@ -103,6 +103,13 @@ class DownloadManager extends ChangeNotifier {
       return;
     }
 
+    // Load metadata
+    final prefs = await SharedPreferences.getInstance();
+    final metadataString = prefs.getString(metadataKey);
+    final Map<String, dynamic> metadataMap = metadataString != null
+        ? json.decode(metadataString)
+        : {};
+
     final List<DownloadTask> newTasks = [];
     for (final task in downloaderTasks) {
       final fileName = task.filename;
@@ -114,6 +121,11 @@ class DownloadManager extends ChangeNotifier {
           ? DownloadType.archive
           : DownloadType.file;
 
+      // Retrieve metadata using URL as key (or taskId if available and stable)
+      // Using URL is safer across reinstalls if taskId changes, but taskId is unique.
+      // Let's try to match by URL first as it's the most stable identifier we have from the start.
+      final metadata = metadataMap[task.url] as Map<String, dynamic>?;
+
       final localTask = DownloadTask(
         url: task.url,
         status: _intToStatus(task.status.index),
@@ -122,6 +134,8 @@ class DownloadManager extends ChangeNotifier {
         fileName: fileName,
         type: type,
         taskId: task.taskId,
+        imageUrl: metadata?['imageUrl'],
+        version: metadata?['version'],
       );
       newTasks.add(localTask);
     }
@@ -136,6 +150,8 @@ class DownloadManager extends ChangeNotifier {
       String url, {
         String? suggestedFilename,
         String? authToken,
+        String? imageUrl,
+        String? version,
       }) async {
     if (_tasks.any((task) =>
     task.url == url &&
@@ -177,7 +193,20 @@ class DownloadManager extends ChangeNotifier {
         ? DownloadType.archive
         : DownloadType.file;
 
-    // unawaited(_notifyDownloadStarted(fileName));
+    // Save metadata
+    if (imageUrl != null || version != null) {
+      final metadataString = prefs.getString(metadataKey);
+      final Map<String, dynamic> metadataMap = metadataString != null
+          ? json.decode(metadataString)
+          : {};
+      
+      metadataMap[url] = {
+        'imageUrl': imageUrl,
+        'version': version,
+      };
+      
+      await prefs.setString(metadataKey, json.encode(metadataMap));
+    }
 
     try {
       final taskId = await downloader.FlutterDownloader.enqueue(
@@ -201,6 +230,8 @@ class DownloadManager extends ChangeNotifier {
           filePath: filePath,
           type: type,
           taskId: taskId,
+          imageUrl: imageUrl,
+          version: version,
         );
         _tasks.add(task);
         notifyListeners();
@@ -256,6 +287,17 @@ class DownloadManager extends ChangeNotifier {
         (task.status == DownloadTaskStatus.running ||
             task.status == DownloadTaskStatus.enqueued)) {
       await downloader.FlutterDownloader.cancel(taskId: task.taskId!);
+    }
+
+    // Remove metadata
+    final prefs = await SharedPreferences.getInstance();
+    final metadataString = prefs.getString(metadataKey);
+    if (metadataString != null) {
+      final Map<String, dynamic> metadataMap = json.decode(metadataString);
+      if (metadataMap.containsKey(task.url)) {
+        metadataMap.remove(task.url);
+        await prefs.setString(metadataKey, json.encode(metadataMap));
+      }
     }
 
     if (task.filePath == null) {

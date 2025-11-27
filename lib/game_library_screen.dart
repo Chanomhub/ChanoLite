@@ -1,4 +1,5 @@
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/models/download_task.dart';
@@ -231,14 +232,22 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Dynamic icon based on file type
+                        // Dynamic icon based on file type or image
                         Expanded(
                           child: Center(
-                            child: Icon(
-                              task.type == DownloadType.archive ? Icons.archive : Icons.insert_drive_file,
-                              size: 48,
-                              color: Colors.grey,
-                            ),
+                            child: task.imageUrl != null
+                                ? CachedNetworkImage(
+                                    imageUrl: task.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    placeholder: (context, url) => Container(color: Colors.grey[300]),
+                                    errorWidget: (context, url, error) => const Icon(Icons.error),
+                                  )
+                                : Icon(
+                                    task.type == DownloadType.archive ? Icons.archive : Icons.insert_drive_file,
+                                    size: 48,
+                                    color: Colors.grey,
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -248,6 +257,13 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
                           maxLines: 2, // Allow for 2 lines
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (task.version != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'v${task.version}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         // Combined status and progress row
                         Row(

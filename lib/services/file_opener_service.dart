@@ -1,13 +1,37 @@
-import 'package:open_file/open_file.dart';
+import 'dart:io';
+import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class FileOpenerService {
   static Future<void> openFile(String filePath) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      print('FileOpenerService: File does not exist at path (dart:io): $filePath');
+      
+      // List files in the directory to help debugging
+      try {
+        final parentDir = file.parent;
+        if (await parentDir.exists()) {
+          print('FileOpenerService: Listing files in ${parentDir.path}:');
+          await for (final entity in parentDir.list()) {
+            print(' - ${entity.path}');
+          }
+        } else {
+          print('FileOpenerService: Parent directory does not exist: ${parentDir.path}');
+        }
+      } catch (e) {
+        print('FileOpenerService: Error listing files: $e');
+      }
+    } else {
+      print('FileOpenerService: File exists at path: $filePath');
+    }
+
+    // Proceed to try opening the file anyway, as open_filex might handle it.
     if (filePath.toLowerCase().endsWith('.apk')) {
       final status = await Permission.requestInstallPackages.request();
       if (status.isGranted) {
         // Permission granted, proceed to open the APK
-        final result = await OpenFile.open(filePath);
+        final result = await OpenFilex.open(filePath);
         _handleOpenResult(result, filePath);
       } else {
         // Permission denied, handle accordingly
@@ -17,7 +41,7 @@ class FileOpenerService {
       }
     } else {
       // Not an APK, open directly
-      final result = await OpenFile.open(filePath);
+      final result = await OpenFilex.open(filePath);
       _handleOpenResult(result, filePath);
     }
   }

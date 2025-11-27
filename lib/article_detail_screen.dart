@@ -235,6 +235,8 @@ class _ArticleDetailContent extends StatelessWidget {
                                           downloadStartRequest.url.toString(),
                                           suggestedFilename: fileName,
                                           authToken: authToken,
+                                          imageUrl: article.coverImage ?? article.mainImage,
+                                          version: article.ver?.toString(),
                                         );
 
                                         ScaffoldMessenger.of(context).showSnackBar(
