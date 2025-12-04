@@ -31,9 +31,9 @@ class Article {
   final String body;
   final dynamic ver;
   final int? version;
-  final DateTime createdAt;
+  final DateTime? createdAt;
   final DateTime updatedAt;
-  final String status;
+  final String? status;
   final String? engine;
   final dynamic mainImage;
   final List<String> images;
@@ -42,7 +42,7 @@ class Article {
   final List<String> tagList;
   final List<String> categoryList;
   final List<String> platformList;
-  final Author author;
+  final Author? author;
   final bool favorited;
   final int favoritesCount;
   final dynamic sequentialCode;
@@ -56,9 +56,9 @@ class Article {
     required this.body,
     this.ver,
     this.version,
-    required this.createdAt,
+    this.createdAt,
     required this.updatedAt,
-    required this.status,
+    this.status,
     this.engine,
     this.mainImage,
     required this.images,
@@ -67,7 +67,7 @@ class Article {
     required this.tagList,
     required this.categoryList,
     required this.platformList,
-    required this.author,
+    this.author,
     required this.favorited,
     required this.favoritesCount,
     this.sequentialCode,
@@ -83,7 +83,7 @@ class Article {
         version = null,
         createdAt = DateTime.now(),
         updatedAt = DateTime.now(),
-        status = '',
+        status = null,
         engine = null,
         mainImage = null,
         images = [],
@@ -92,7 +92,7 @@ class Article {
         tagList = [],
         categoryList = [],
         platformList = [],
-        author = Author.dummy(),
+        author = null,
         favorited = false,
         favoritesCount = 0,
         sequentialCode = null,
@@ -104,10 +104,10 @@ class Article {
       title: json['title'],
       slug: json['slug'],
       description: json['description'],
-      body: json['body'],
+      body: json['body'] ?? '',
       ver: json['ver'],
       version: json['version'],
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
       updatedAt: DateTime.parse(json['updatedAt']),
       status: json['status'],
       engine: json['engine']?['name'] as String?,
@@ -141,7 +141,7 @@ class Article {
       platformList: (json['platforms'] != null)
           ? (json['platforms'] as List).map((e) => e['name'] as String).toList()
           : List<String>.from(json['platformList'] ?? []),
-      author: Author.fromJson(json['author']),
+      author: json['author'] != null ? Author.fromJson(json['author']) : null,
       favorited: json['favorited'] ?? false,
       favoritesCount: json['favoritesCount'] ?? 0,
       sequentialCode: json['sequentialCode'],
@@ -158,7 +158,7 @@ class Article {
       'body': body,
       'ver': ver,
       'version': version,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'status': status,
       'engine': engine,
@@ -169,7 +169,7 @@ class Article {
       'tagList': tagList,
       'categoryList': categoryList,
       'platformList': platformList,
-      'author': author.toJson(),
+      'author': author?.toJson(),
       'favorited': favorited,
       'favoritesCount': favoritesCount,
       'sequentialCode': sequentialCode,

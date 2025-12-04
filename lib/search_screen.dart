@@ -195,6 +195,24 @@ class _SearchScreenState extends State<SearchScreen> {
         }
       }
 
+  const String _searchArticleFields = r'''
+    id
+    title
+    description
+    slug
+    coverImage
+    mainImage
+    backgroundImage
+    favoritesCount
+    updatedAt
+    tags {
+      name
+    }
+    platforms {
+      name
+    }
+  ''';
+
       final response = await _articleService.getArticles(
         limit: _limit,
         offset: _offset,
@@ -205,6 +223,7 @@ class _SearchScreenState extends State<SearchScreen> {
         engine: _selectedEngine,
         status: _selectedStatus,
         sequentialCode: _selectedSequentialCode,
+        returnFields: _searchArticleFields,
       );
 
       if (reset && response.articles.isNotEmpty) {
@@ -769,7 +788,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ArticleDetailScreen(article: article),
+                    builder: (context) => ArticleDetailScreen(articleId: article.id),
                   ),
                 );
               },

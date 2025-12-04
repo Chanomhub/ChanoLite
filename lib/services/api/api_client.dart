@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  static const String baseUrl = 'https://api.chanomhub.online/api';
+  static const String baseUrl = 'https://api.chanomhub.com/api';
   static String? _authToken;
   final http.Client _httpClient;
 
@@ -16,7 +16,7 @@ class ApiClient {
 
   Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
     final uri = Uri.parse('$baseUrl/$endpoint');
-    print('GET: $uri'); // Debug print
+    // print('GET: $uri'); // Debug print
     final response = await _httpClient.get(uri, headers: _buildHeaders(headers));
     return _handleResponse(response);
   }
@@ -39,14 +39,19 @@ class ApiClient {
     return _handleResponse(response);
   }
 
-  Future<dynamic> query(String query, {Map<String, dynamic>? variables}) async {
-        final uri = Uri.parse('https://api.chanomhub.online/api/graphql');
+  Future<Map<String, dynamic>> query(String query, {Map<String, dynamic>? variables}) async {
+    final uri = Uri.parse('$baseUrl/graphql');
     final body = {
       'query': query,
       'variables': variables,
     };
     final response = await _httpClient.post(uri, headers: _buildHeaders(null), body: json.encode(body));
-    return _handleResponse(response);
+    
+    final data = _handleResponse(response);
+    if (data is Map<String, dynamic> && data.containsKey('errors')) {
+       throw Exception('GraphQL Error: ${json.encode(data['errors'])}');
+    }
+    return data as Map<String, dynamic>;
   }
 
   Map<String, String> _buildHeaders(Map<String, String>? additionalHeaders) {

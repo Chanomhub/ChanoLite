@@ -15,11 +15,11 @@ class Download {
 
   factory Download.fromJson(Map<String, dynamic> json) {
     return Download(
-      id: json['id'],
-      name: json['name'],
-      url: json['url'],
-      isActive: json['isActive'],
-      vipOnly: json['vipOnly'],
+      id: json['id']?.toString() ?? DateTime.now().microsecondsSinceEpoch.toString(),
+      name: json['name'] ?? 'Unknown',
+      url: json['url'] ?? '',
+      isActive: json['isActive'] ?? true,
+      vipOnly: json['vipOnly'] ?? false,
     );
   }
 

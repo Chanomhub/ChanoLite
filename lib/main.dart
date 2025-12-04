@@ -24,7 +24,7 @@ import 'package:chanolite/services/local_notification_service.dart';
 import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/article_detail_screen.dart';
 import 'package:chanolite/models/article_model.dart';
-import 'package:chanolite/repositories/article_repository.dart';
+import 'package:chanolite/services/api/article_service.dart';
 import 'package:chanolite/theme/locale_notifier.dart';
 import 'package:chanolite/l10n/generated/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -110,9 +110,8 @@ class _MyAppState extends State<MyApp> {
       final articleIdString = message.data['article_id'];
       final articleId = int.tryParse(articleIdString ?? '');
       if (articleId != null) {
-        final article = Article.idOnly(articleId);
         navigatorKey.currentState?.push(MaterialPageRoute(
-          builder: (context) => ArticleDetailScreen(article: article),
+          builder: (context) => ArticleDetailScreen(articleId: articleId),
         ));
       }
     }
@@ -124,7 +123,7 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         Provider<CacheService>(create: (_) => CacheService()),
-        Provider<ArticleRepository>(create: (_) => ArticleRepository()),
+        Provider<ArticleService>(create: (_) => ArticleService()),
         ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: authManager),
         ChangeNotifierProvider(create: (_) => ThemeNotifier(ThemeMode.dark)),

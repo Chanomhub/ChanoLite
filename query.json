@@ -1,0 +1,3 @@
+{
+    "query": "query { __type(name: \"Query\") { fields { name type { name kind ofType { name kind ofType { name kind } } } } } }"
+}
