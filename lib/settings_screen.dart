@@ -10,6 +10,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:chanolite/theme/locale_notifier.dart';
+import 'package:chanolite/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -142,6 +144,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              AppLocalizations.of(context)!.settings,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.language),
+                title: Text(AppLocalizations.of(context)!.language),
+                subtitle: Text(_getLanguageName(context, context.watch<LocaleNotifier>().locale.languageCode)),
+                onTap: () => _showLanguageDialog(context),
               ),
             ),
             const SizedBox(height: 24),
@@ -524,5 +540,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  String _getLanguageName(BuildContext context, String code) {
+    switch (code) {
+      case 'en':
+        return AppLocalizations.of(context)!.english;
+      case 'th':
+        return AppLocalizations.of(context)!.thai;
+      case 'ja':
+        return AppLocalizations.of(context)!.japanese;
+      case 'zh':
+        return AppLocalizations.of(context)!.chinese;
+      default:
+        return code;
+    }
+  }
+
+  void _showLanguageDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(context)!.language),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildLanguageOption(context, 'en', AppLocalizations.of(context)!.english),
+              _buildLanguageOption(context, 'th', AppLocalizations.of(context)!.thai),
+              _buildLanguageOption(context, 'ja', AppLocalizations.of(context)!.japanese),
+              _buildLanguageOption(context, 'zh', AppLocalizations.of(context)!.chinese),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOption(BuildContext context, String code, String name) {
+    final localeNotifier = context.read<LocaleNotifier>();
+    final isSelected = localeNotifier.locale.languageCode == code;
+
+    return ListTile(
+      title: Text(name),
+      trailing: isSelected ? const Icon(Icons.check) : null,
+      onTap: () {
+        localeNotifier.setLocale(Locale(code));
+        Navigator.of(context).pop();
+      },
+    );
   }
 }

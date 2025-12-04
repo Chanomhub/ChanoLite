@@ -25,6 +25,9 @@ import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/article_detail_screen.dart';
 import 'package:chanolite/models/article_model.dart';
 import 'package:chanolite/repositories/article_repository.dart';
+import 'package:chanolite/theme/locale_notifier.dart';
+import 'package:chanolite/l10n/generated/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -49,7 +52,12 @@ Future<void> main() async {
   final downloadManager = DownloadManager();
   await downloadManager.loadTasks();
 
-  runApp(MyApp(downloadManager: downloadManager));
+  final initialLocale = await LocaleNotifier.loadSavedLocale();
+
+  runApp(MyApp(
+    downloadManager: downloadManager,
+    initialLocale: initialLocale,
+  ));
 }
 
 Future<void> _requestNotificationPermission() async {
@@ -66,10 +74,14 @@ Future<void> _requestNotificationPermission() async {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, required this.downloadManager});
-
+  const MyApp({
+    super.key,
+    required this.downloadManager,
+    required this.initialLocale,
+  });
 
   final DownloadManager downloadManager;
+  final Locale initialLocale;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -116,15 +128,29 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: authManager),
         ChangeNotifierProvider(create: (_) => ThemeNotifier(ThemeMode.dark)),
+        ChangeNotifierProvider(create: (_) => LocaleNotifier(widget.initialLocale)),
       ],
-      child: Consumer<ThemeNotifier>(
-        builder: (context, themeNotifier, child) {
+      child: Consumer2<ThemeNotifier, LocaleNotifier>(
+        builder: (context, themeNotifier, localeNotifier, child) {
           return MaterialApp(
             navigatorKey: navigatorKey,
             title: 'ChanoLite',
             theme: AppTheme.light(palette: themeNotifier.currentPalette),
             darkTheme: AppTheme.dark(palette: themeNotifier.currentPalette),
             themeMode: themeNotifier.themeMode,
+            locale: localeNotifier.locale,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'),
+              Locale('th'),
+              Locale('ja'),
+              Locale('zh'),
+            ],
             home: const AuthGate(),
             routes: {
               '/login': (_) => const LoginScreen(),

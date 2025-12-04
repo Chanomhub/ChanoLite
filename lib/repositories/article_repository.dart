@@ -8,12 +8,12 @@ class ArticleRepository {
   ArticleRepository({ArticleService? articleService})
       : _articleService = articleService ?? ArticleService();
 
-  Future<Article> getArticleById(int id) async {
-    return await _articleService.getArticleById(id);
+  Future<Article> getArticleById(int id, {String? language}) async {
+    return await _articleService.getArticleById(id, language: language);
   }
 
-  Future<Article> getArticleBySlug(String slug) async {
-    return await _articleService.getArticleBySlug(slug);
+  Future<Article> getArticleBySlug(String slug, {String? language}) async {
+    return await _articleService.getArticleBySlug(slug, language: language);
   }
   Future<List<Download>> getDownloads(int articleId) async {
     return await _articleService.getDownloads(articleId);

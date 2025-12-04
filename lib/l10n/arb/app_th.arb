@@ -1,0 +1,10 @@
+{
+    "@@locale": "th",
+    "helloWorld": "สวัสดีชาวโลก!",
+    "settings": "การตั้งค่า",
+    "language": "ภาษา",
+    "english": "อังกฤษ",
+    "thai": "ไทย",
+    "japanese": "ญี่ปุ่น",
+    "chinese": "จีน"
+}

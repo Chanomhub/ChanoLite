@@ -1,4 +1,5 @@
 import 'package:chanolite/game_library_screen.dart';
+import 'package:chanolite/theme/locale_notifier.dart';
 import 'package:chanolite/managers/article_detail_manager.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
@@ -26,14 +27,67 @@ class ArticleDetailScreen extends StatelessWidget {
       create: (context) => ArticleDetailManager(
         repository: Provider.of<ArticleRepository>(context, listen: false),
         cacheService: Provider.of<CacheService>(context, listen: false),
-      )..loadArticle(article),
+      )..loadArticle(article, language: Provider.of<LocaleNotifier>(context, listen: false).locale.languageCode),
       child: const _ArticleDetailContent(),
     );
   }
 }
 
-class _ArticleDetailContent extends StatelessWidget {
+class _ArticleDetailContent extends StatefulWidget {
   const _ArticleDetailContent();
+
+  @override
+  State<_ArticleDetailContent> createState() => _ArticleDetailContentState();
+}
+
+class _ArticleDetailContentState extends State<_ArticleDetailContent> {
+  String? _lastLanguageCode;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final manager = Provider.of<ArticleDetailManager>(context, listen: false);
+    final locale = Provider.of<LocaleNotifier>(context).locale;
+    // We need to avoid infinite loops or unnecessary reloads.
+    // Manager doesn't store current language anymore, so we can't check against it easily unless we store it in manager or here.
+    // But wait, manager.article has the data.
+    // Let's just call loadArticle. The manager handles loading state.
+    // But calling it in didChangeDependencies might be called too often.
+    
+    // Actually, the cleaner way is to use `ProxyProvider` or `ChangeNotifierProxyProvider` in `ArticleDetailScreen` to update the manager when `LocaleNotifier` changes.
+    // But `ArticleDetailManager` is created here.
+    
+    // Let's go with `didChangeDependencies` but we need to be careful.
+    // Or just use a `useEffect` hook if we had flutter_hooks.
+    
+    // Let's use `addPostFrameCallback` to trigger load if needed.
+    // But we don't want to trigger it on *every* rebuild, only when locale changes.
+    
+    // Let's stick to the plan: `ArticleDetailScreen` builds the provider.
+    // If we change `ArticleDetailScreen` to be a `Consumer<LocaleNotifier>`, it rebuilds when locale changes.
+    // But `ChangeNotifierProvider` preserves the instance.
+    // So we need to call `manager.loadArticle` with new locale.
+    
+    // We can use a `Consumer` inside `ArticleDetailScreen` that wraps the `ChangeNotifierProvider`? No, the provider needs to be above.
+    
+    // Let's use `Consumer<LocaleNotifier>` as a child of `ChangeNotifierProvider`.
+    // And inside the builder, we check if we need to reload.
+    
+    // Actually, `ArticleDetailManager` should probably just listen to `LocaleNotifier` itself if passed in constructor?
+    // No, that couples them.
+    
+    // Let's use `didChangeDependencies` in a child widget.
+    
+
+    if (_lastLanguageCode != locale.languageCode) {
+      _lastLanguageCode = locale.languageCode;
+      // Use addPostFrameCallback to avoid calling setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (manager.article != null) {
+            manager.loadArticle(manager.article!, language: locale.languageCode);
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +151,7 @@ class _ArticleDetailContent extends StatelessWidget {
               )
             : const Icon(Icons.image),
       ),
+      actions: [],
     );
   }
 

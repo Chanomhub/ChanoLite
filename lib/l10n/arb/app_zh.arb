@@ -1,0 +1,10 @@
+{
+    "@@locale": "zh",
+    "helloWorld": "你好，世界！",
+    "settings": "设置",
+    "language": "语言",
+    "english": "英语",
+    "thai": "泰语",
+    "japanese": "日语",
+    "chinese": "中文"
+}

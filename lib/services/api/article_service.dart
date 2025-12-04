@@ -100,14 +100,14 @@ class ArticleService {
     return ArticlesResponse.fromJson(articlesData);
   }
 
-  Future<Article> getArticleBySlug(String? slug) async {
+  Future<Article> getArticleBySlug(String? slug, {String? language}) async {
     if (slug == null || slug.isEmpty) {
       throw Exception('Slug cannot be null or empty');
     }
 
     const String articleQueryString = r'''
-      query ArticleQuery($slug: String) {
-        article(slug: $slug) {
+      query ArticleQuery($slug: String, $language: String) {
+        article(slug: $slug, language: $language) {
           id
           slug
           sequentialCode
@@ -163,8 +163,8 @@ class ArticleService {
     // The ideal solution would be for the backend to allow querying downloads by slug directly,
     // or to include downloads as a subfield of the article query.
     const String combinedQueryString = r'''
-      query ArticleWithDownloads($id: Int!, $slug: String) {
-        article(id: $id, slug: $slug) {
+      query ArticleWithDownloads($id: Int!, $slug: String, $language: String) {
+        article(id: $id, slug: $slug, language: $language) {
           id
           slug
           sequentialCode
@@ -216,6 +216,7 @@ class ArticleService {
       variables: {
         'id': articleId,
         'slug': slug, // Pass slug as well, in case the backend uses it for article details even with ID
+        'language': language,
       },
     ) as Map<String, dynamic>;
 
@@ -227,10 +228,10 @@ class ArticleService {
     return Article.fromJson(articleJson);
   }
 
-  Future<Article> getArticleById(int id) async {
+  Future<Article> getArticleById(int id, {String? language}) async {
     const String combinedQueryString = r'''
-      query ArticleWithDownloads($id: Int!) {
-        article(id: $id) {
+      query ArticleWithDownloads($id: Int!, $language: String) {
+        article(id: $id, language: $language) {
           id
           slug
           sequentialCode
@@ -279,7 +280,10 @@ class ArticleService {
 
     final response = await _apiClient.query(
       combinedQueryString,
-      variables: {'id': id},
+      variables: {
+        'id': id,
+        'language': language,
+      },
     ) as Map<String, dynamic>;
 
     final articleJson = response['data']['article'] as Map<String, dynamic>;
