@@ -633,7 +633,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       downloadManager: downloadManager,
       authToken: authToken,
       useExternalBrowser: useExternalBrowser,
-      onDownloadStart: (browser, downloadStartRequest) async {
+      onDownloadStart: (browser, downloadStartRequest, cookies) async {
         // Close the browser to reveal the dialog
         await browser.close();
         
@@ -664,7 +664,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                         downloadManager.startDownload(
                           downloadStartRequest.url.toString(),
                           suggestedFilename: fileName,
-                          authToken: authToken,
+                          cookies: cookies,
                           imageUrl: article.coverImage ?? article.mainImage,
                           version: article.ver?.toString(),
                         );

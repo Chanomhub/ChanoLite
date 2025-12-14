@@ -54,8 +54,8 @@ class FileOpenerService {
     if (filePath.toLowerCase().endsWith('.apk')) {
       final status = await Permission.requestInstallPackages.request();
       if (status.isGranted) {
-        // Permission granted, proceed to open the APK
-        final result = await OpenFilex.open(filePath);
+        // Permission granted, proceed to open the APK with explicit MIME type
+        final result = await OpenFilex.open(filePath, type: 'application/vnd.android.package-archive');
         _handleOpenResult(result, filePath);
       } else {
         // Permission denied, handle accordingly

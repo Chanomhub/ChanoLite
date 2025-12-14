@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 class InAppBrowserHelper extends InAppBrowser {
   final DownloadManager downloadManager;
   final String? authToken;
-  final void Function(InAppBrowserHelper, DownloadStartRequest) onDownloadStartCallback;
+  final void Function(InAppBrowserHelper, DownloadStartRequest, String? cookies) onDownloadStartCallback;
 
 
   InAppBrowserHelper({
@@ -93,7 +93,7 @@ class InAppBrowserHelper extends InAppBrowser {
       {
         required DownloadManager downloadManager,
         String? authToken,
-        required void Function(InAppBrowserHelper, DownloadStartRequest) onDownloadStart,
+        required void Function(InAppBrowserHelper, DownloadStartRequest, String? cookies) onDownloadStart,
         bool useExternalBrowser = false,
       }
       ) async {
@@ -145,9 +145,27 @@ class InAppBrowserHelper extends InAppBrowser {
     );
   }
 
+  /// Get all cookies for the current URL as a Cookie header string
+  Future<String> getCookiesAsString(Uri url) async {
+    final cookies = await CookieManager.instance().getCookies(url: WebUri(url.toString()));
+    if (cookies.isEmpty) {
+      return '';
+    }
+    return cookies.map((c) => '${c.name}=${c.value}').join('; ');
+  }
+
   @override
   Future<void> onDownloadStartRequest(DownloadStartRequest downloadStartRequest) async {
-    onDownloadStartCallback(this, downloadStartRequest);
+    // Capture cookies for the download URL before calling callback
+    String? cookieString;
+    try {
+      cookieString = await getCookiesAsString(downloadStartRequest.url);
+      debugPrint('InAppBrowserHelper: Captured cookies: $cookieString');
+    } catch (e) {
+      debugPrint('InAppBrowserHelper: Error getting cookies: $e');
+    }
+    
+    onDownloadStartCallback(this, downloadStartRequest, cookieString);
   }
 
   @override

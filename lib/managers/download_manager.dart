@@ -146,7 +146,7 @@ class DownloadManager extends ChangeNotifier {
   Future<void> startDownload(
       String url, {
         String? suggestedFilename,
-        String? authToken,
+        String? cookies,
         String? imageUrl,
         String? version,
       }) async {
@@ -206,13 +206,18 @@ class DownloadManager extends ChangeNotifier {
     }
 
     try {
+      // Build headers - use cookies from browser session if available
+      final Map<String, String> headers = {};
+      if (cookies != null && cookies.isNotEmpty) {
+        headers['Cookie'] = cookies;
+        print('DownloadManager: Using browser cookies: $cookies');
+      }
+
       final taskId = await downloader.FlutterDownloader.enqueue(
         url: url,
         savedDir: savePath,
         fileName: fileName,
-        headers: authToken != null && authToken.isNotEmpty
-            ? {'Cookie': 'token=$authToken'}
-            : {},
+        headers: headers,
         showNotification: true,
         openFileFromNotification: true,
         saveInPublicStorage: true, // Important for public access on newer Android versions
@@ -238,19 +243,69 @@ class DownloadManager extends ChangeNotifier {
     }
   }
 
-  void _updateTaskByTaskId(
+  Future<void> _updateTaskByTaskId(
       String taskId, {
         DownloadTaskStatus? status,
         double? progress,
-      }) {
+      }) async {
     final index = _tasks.indexWhere((task) => task.taskId == taskId);
-    if (index != -1) {
-      _tasks[index] = _tasks[index].copyWith(
-        status: status,
-        progress: progress,
-      );
-      notifyListeners();
+    if (index == -1) return;
+
+    String? actualFilePath;
+    String? actualFileName;
+
+    // When download completes, find the actual saved file
+    if (status == DownloadTaskStatus.complete) {
+      try {
+        final tasks = await downloader.FlutterDownloader.loadTasks();
+        final downloaderTask = tasks?.firstWhere(
+          (t) => t.taskId == taskId,
+          orElse: () => throw Exception('Task not found'),
+        );
+        
+        if (downloaderTask != null && downloaderTask.filename != null) {
+          final baseFileName = downloaderTask.filename!;
+          final baseName = path.basenameWithoutExtension(baseFileName);
+          final extension = path.extension(baseFileName);
+          
+          // When saveInPublicStorage is true, file is saved to public Download folder
+          const publicDownloadDir = '/storage/emulated/0/Download';
+          
+          final publicDir = Directory(publicDownloadDir);
+          if (await publicDir.exists()) {
+            DateTime? newestTime;
+            
+            // Find the newest file matching the pattern
+            await for (final entity in publicDir.list()) {
+              if (entity is File) {
+                final fileName = path.basename(entity.path);
+                // Match pattern: baseName.extension or baseName (N).extension
+                if (fileName.startsWith(baseName) && fileName.endsWith(extension)) {
+                  final fileStat = await entity.stat();
+                  if (newestTime == null || fileStat.modified.isAfter(newestTime)) {
+                    newestTime = fileStat.modified;
+                    actualFilePath = entity.path;
+                    actualFileName = fileName;
+                  }
+                }
+              }
+            }
+          }
+          
+          print('DownloadManager: Actual saved file (newest): $actualFilePath');
+        }
+      } catch (e) {
+        print('DownloadManager: Error getting actual file path: $e');
+      }
     }
+
+    _tasks[index] = _tasks[index].copyWith(
+      status: status,
+      progress: progress,
+      filePath: actualFilePath,
+      fileName: actualFileName,
+    );
+    notifyListeners();
   }
 
   void _updateTask(
