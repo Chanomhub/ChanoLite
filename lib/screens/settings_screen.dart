@@ -1,4 +1,4 @@
-import 'package:chanolite/credits_screen.dart';
+import 'package:chanolite/screens/credits_screen.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';

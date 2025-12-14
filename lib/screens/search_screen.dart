@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chanolite/utils/image_url_helper.dart';
 import 'package:chanolite/services/api/article_service.dart';
 import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/theme/app_theme.dart';
@@ -10,8 +11,8 @@ import 'package:chanolite/widgets/search_menu_component.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'article_detail_screen.dart';
-import 'models/article_model.dart';
+import 'package:chanolite/screens/article_detail_screen.dart';
+import 'package:chanolite/models/article_model.dart';
 
 const _statusOptions = [
   'PUBLISHED',
@@ -717,10 +718,11 @@ class _SearchScreenState extends State<SearchScreen> {
           }
 
           final article = _articles[index];
-          final imageUrl =
-              article.coverImage ??
-              article.mainImage ??
-              article.backgroundImage;
+          final imageUrl = ImageUrlHelper.getFirstValid([
+            article.coverImage,
+            article.mainImage,
+            article.backgroundImage,
+          ]);
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: ListTile(

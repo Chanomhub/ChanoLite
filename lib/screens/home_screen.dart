@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chanolite/utils/image_url_helper.dart';
 
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
@@ -9,10 +10,9 @@ import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'dart:async';
 
-
-import 'article_detail_screen.dart';
-import 'models/article_model.dart';
-import 'search_screen.dart';
+import 'package:chanolite/screens/article_detail_screen.dart';
+import 'package:chanolite/models/article_model.dart';
+import 'package:chanolite/screens/search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -795,19 +795,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String? _getValidImageUrl(Article article) {
-    final candidates = [
+    return ImageUrlHelper.getFirstValid([
       article.coverImage,
       article.mainImage,
       article.backgroundImage,
-    ];
-
-    for (final url in candidates) {
-      if (url != null && url.isNotEmpty) {
-        return url;
-      }
-    }
-
-    return null;
+    ]);
   }
 
   Widget _buildOptimizedImage(

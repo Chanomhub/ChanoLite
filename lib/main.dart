@@ -5,15 +5,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 
 
-import 'package:chanolite/game_library_screen.dart';
-import 'package:chanolite/home_screen.dart';
+import 'package:chanolite/screens/game_library_screen.dart';
+import 'package:chanolite/screens/home_screen.dart';
 
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/screens/login_screen.dart';
-import 'package:chanolite/search_screen.dart';
-import 'package:chanolite/settings_screen.dart';
-import 'package:chanolite/settings_screen.dart';
+import 'package:chanolite/screens/search_screen.dart';
+import 'package:chanolite/screens/settings_screen.dart';
 import 'package:chanolite/theme/app_theme.dart';
 import 'package:chanolite/theme/theme_notifier.dart';
 import 'package:chanolite/widgets/global_download_indicator.dart';
@@ -22,7 +21,7 @@ import 'package:provider/provider.dart';
 import 'package:chanolite/services/notification_service.dart';
 import 'package:chanolite/services/local_notification_service.dart';
 import 'package:chanolite/services/cache_service.dart';
-import 'package:chanolite/article_detail_screen.dart';
+import 'package:chanolite/screens/article_detail_screen.dart';
 import 'package:chanolite/models/article_model.dart';
 import 'package:chanolite/services/api/article_service.dart';
 import 'package:chanolite/theme/locale_notifier.dart';
