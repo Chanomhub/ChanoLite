@@ -23,6 +23,7 @@ class DownloadTask {
   final String? taskId; // ✨ เพิ่มฟิลด์นี้สำหรับ flutter_downloader
   final String? imageUrl;
   final String? version;
+  final String? packageName; // Package name of installed app
 
   DownloadTask({
     required this.url,
@@ -34,6 +35,7 @@ class DownloadTask {
     this.taskId, // ✨ เพิ่มใน constructor
     this.imageUrl,
     this.version,
+    this.packageName,
   });
 
   DownloadTask copyWith({
@@ -42,9 +44,10 @@ class DownloadTask {
     String? filePath,
     String? fileName,
     DownloadType? type,
-    String? taskId, // ✨ เพิ่มใน copyWith
+    String? taskId,
     String? imageUrl,
     String? version,
+    String? packageName,
   }) {
     return DownloadTask(
       url: url,
@@ -53,9 +56,10 @@ class DownloadTask {
       filePath: filePath ?? this.filePath,
       fileName: fileName ?? this.fileName,
       type: type ?? this.type,
-      taskId: taskId ?? this.taskId, // ✨ เพิ่มที่นี่
+      taskId: taskId ?? this.taskId,
       imageUrl: imageUrl ?? this.imageUrl,
       version: version ?? this.version,
+      packageName: packageName ?? this.packageName,
     );
   }
 
@@ -67,9 +71,10 @@ class DownloadTask {
       filePath: json['filePath'] as String?,
       fileName: json['fileName'] as String?,
       type: _typeFromName(json['type'] as String?),
-      taskId: json['taskId'] as String?, // ✨ เพิ่มการ deserialize
+      taskId: json['taskId'] as String?,
       imageUrl: json['imageUrl'] as String?,
       version: json['version'] as String?,
+      packageName: json['packageName'] as String?,
     );
   }
 
@@ -81,9 +86,10 @@ class DownloadTask {
       'filePath': filePath,
       'fileName': fileName,
       'type': type.name,
-      'taskId': taskId, // ✨ เพิ่มการ serialize
+      'taskId': taskId,
       'imageUrl': imageUrl,
       'version': version,
+      'packageName': packageName,
     };
   }
 

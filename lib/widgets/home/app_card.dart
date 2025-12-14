@@ -24,6 +24,7 @@ class AppCard extends StatelessWidget {
         margin: const EdgeInsets.only(right: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // Prevent overflow
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(16.0),
@@ -41,7 +42,7 @@ class AppCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               title,
               maxLines: 2,
@@ -50,22 +51,13 @@ class AppCard extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey[600],
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'EARLY ACCESS', // Or pass as param if needed
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
                   ),
             ),
           ],

@@ -6,6 +6,7 @@ import 'package:chanolite/models/download_task.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/services/file_opener_service.dart';
+import 'package:chanolite/services/installed_apps_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -56,6 +57,8 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
   }
 
   void _showContextMenu(BuildContext context, DownloadTask task) {
+    final isApk = task.fileName?.toLowerCase().endsWith('.apk') ?? false;
+    
     showModalBottomSheet(
       context: context,
       builder: (BuildContext bc) {
@@ -72,11 +75,26 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
             if (task.status == DownloadTaskStatus.complete)
               ListTile(
                 leading: const Icon(Icons.open_in_new),
-                title: const Text('Open'),
+                title: Text(isApk ? 'Install APK' : 'Open'),
                 onTap: () {
                   Navigator.of(context).pop(); // Close the bottom sheet
                   if (task.filePath != null) {
                     FileOpenerService.openFile(task.filePath!);
+                  }
+                },
+              ),
+            // Launch installed app option (only for APK with package name)
+            if (task.status == DownloadTaskStatus.complete && task.packageName != null)
+              ListTile(
+                leading: const Icon(Icons.play_arrow),
+                title: const Text('Launch App'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  final success = await InstalledAppsService.launchApp(task.packageName!);
+                  if (!success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('App not installed or could not be launched')),
+                    );
                   }
                 },
               ),

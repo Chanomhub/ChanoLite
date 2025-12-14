@@ -62,6 +62,8 @@ dependencies:
   device_info_plus: ^12.2.0
   flutter_local_notifications: ^19.5.0
   cached_network_image: ^3.4.1
+  android_intent_plus: ^5.0.2
+  installed_apps: ^2.0.0
 
 
 dev_dependencies:
