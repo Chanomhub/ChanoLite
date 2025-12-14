@@ -64,6 +64,8 @@ dependencies:
   cached_network_image: ^3.4.1
   android_intent_plus: ^5.0.2
   installed_apps: ^2.0.0
+  supabase_flutter: ^2.10.0
+  flutter_dotenv: ^5.2.1
 
 
 dev_dependencies:

@@ -19,6 +19,15 @@ jobs:
         with:
           flutter-version: '3.35.5'
 
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          APPLOVIN_SDK_KEY=${{ secrets.APPLOVIN_SDK_KEY }}
+          BANNER_AD_UNIT_ID=${{ secrets.BANNER_AD_UNIT_ID }}
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          EOF
+
       - name: Install dependencies
         run: flutter pub get
 

@@ -3,6 +3,8 @@ import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 
 import 'package:chanolite/screens/game_library_screen.dart';
@@ -31,11 +33,37 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables
+  await dotenv.load(fileName: '.env');
+  
   await Firebase.initializeApp();
   await FlutterDownloader.initialize(
     debug: true,
     ignoreSsl: true
   );
+  
+  // Initialize Supabase if credentials are available
+  final supabaseUrl = dotenv.env['SUPABASE_URL'];
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+  if (supabaseUrl != null && 
+      supabaseUrl.isNotEmpty && 
+      supabaseUrl != 'YOUR_SUPABASE_URL' &&
+      supabaseAnonKey != null && 
+      supabaseAnonKey.isNotEmpty &&
+      supabaseAnonKey != 'YOUR_SUPABASE_ANON_KEY') {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
+    );
+    print('Supabase initialized');
+  } else {
+    print('Supabase credentials not configured, SSO disabled');
+  }
+  
   await NotificationService.initialize();
   await LocalNotificationService.initialize();
   await _requestNotificationPermission();

@@ -53,3 +53,6 @@ android/key.properties
 android/app/upload-keystore.jks
 upload-keystore.jks
 keystore-base64.txt
+
+
+.env

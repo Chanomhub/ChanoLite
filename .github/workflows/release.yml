@@ -49,6 +49,15 @@ jobs:
       - name: Clean Flutter
         run: flutter clean
       
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          APPLOVIN_SDK_KEY=${{ secrets.APPLOVIN_SDK_KEY }}
+          BANNER_AD_UNIT_ID=${{ secrets.BANNER_AD_UNIT_ID }}
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          EOF
+
       - name: Get Flutter dependencies
         run: flutter pub get
       

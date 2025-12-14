@@ -49,6 +49,16 @@ jobs:
         if: steps.check_release.outputs.exists == 'true'
         run: echo "Nightly for today already exists. Skipping build."
 
+      - name: Create .env file
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          cat > .env << EOF
+          APPLOVIN_SDK_KEY=${{ secrets.APPLOVIN_SDK_KEY }}
+          BANNER_AD_UNIT_ID=${{ secrets.BANNER_AD_UNIT_ID }}
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          EOF
+
       - name: Get Flutter dependencies
         if: steps.check_release.outputs.exists == 'false'
         run: flutter pub get

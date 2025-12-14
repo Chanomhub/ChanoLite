@@ -47,6 +47,15 @@ class UserService {
     return User.fromJson(data['user']);
   }
 
+  /// Login using Supabase SSO token.
+  /// Exchanges the Supabase access token with the backend to get an app User.
+  Future<User> loginWithSSO(String supabaseToken) async {
+    final data = await _apiClient.post('users/sso', body: {
+      'token': supabaseToken,
+    }) as Map<String, dynamic>;
+    return User.fromJson(data['user']);
+  }
+
   // Profile
 
   Future<Profile> getProfileByUsername(String username) async {

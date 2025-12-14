@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:chanolite/models/user_model.dart';
 import 'package:chanolite/services/api/api_client.dart';
 import 'package:chanolite/services/api/user_service.dart';
+import 'package:chanolite/services/supabase_auth_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -88,6 +89,37 @@ class AuthManager extends ChangeNotifier {
 
     try {
       final user = await _userService.registerUser(email, username, password);
+      await _addOrUpdateAccount(user);
+      await _setActive(user);
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Login using Google SSO via Supabase.
+  /// Initiates OAuth flow, then exchanges Supabase token with backend.
+  Future<void> loginWithGoogle() async {
+    final supabaseAuth = SupabaseAuthService.instance;
+    if (!supabaseAuth.isAvailable) {
+      throw Exception('Supabase is not initialized');
+    }
+
+    _loading = true;
+    notifyListeners();
+
+    try {
+      // Initiate Google OAuth flow
+      await supabaseAuth.signInWithGoogle();
+
+      // After redirect, get the access token
+      final accessToken = supabaseAuth.accessToken;
+      if (accessToken == null) {
+        throw Exception('No access token from Supabase');
+      }
+
+      // Exchange Supabase token with backend
+      final user = await _userService.loginWithSSO(accessToken);
       await _addOrUpdateAccount(user);
       await _setActive(user);
     } finally {
