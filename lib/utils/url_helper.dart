@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 class InAppBrowserHelper extends InAppBrowser {
   final DownloadManager downloadManager;
   final String? authToken;
-  final void Function(DownloadStartRequest) onDownloadStartCallback;
+  final void Function(InAppBrowserHelper, DownloadStartRequest) onDownloadStartCallback;
 
 
   InAppBrowserHelper({
@@ -93,7 +93,7 @@ class InAppBrowserHelper extends InAppBrowser {
       {
         required DownloadManager downloadManager,
         String? authToken,
-        required void Function(DownloadStartRequest) onDownloadStart,
+        required void Function(InAppBrowserHelper, DownloadStartRequest) onDownloadStart,
         bool useExternalBrowser = false,
       }
       ) async {
@@ -147,7 +147,7 @@ class InAppBrowserHelper extends InAppBrowser {
 
   @override
   Future<void> onDownloadStartRequest(DownloadStartRequest downloadStartRequest) async {
-    onDownloadStartCallback(downloadStartRequest);
+    onDownloadStartCallback(this, downloadStartRequest);
   }
 
   @override
@@ -157,7 +157,7 @@ class InAppBrowserHelper extends InAppBrowser {
       return NavigationActionPolicy.ALLOW;
     }
 
-    final scheme = webUri.scheme?.toLowerCase() ?? '';
+    final scheme = webUri.scheme.toLowerCase();
     if (scheme == 'http' || scheme == 'https') {
       return NavigationActionPolicy.ALLOW;
     }

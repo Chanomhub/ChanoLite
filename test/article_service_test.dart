@@ -1,15 +1,13 @@
-import 'package:chanolite/models/article_model.dart';
 import 'package:chanolite/services/api/api_client.dart';
-import 'package:chanolite/services/api/article_service.dart';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'dart:ui';
 
 class FakeApiClient extends ApiClient {
   Map<String, dynamic>? lastVariables;
   String? lastQuery;
 
   @override
-  Future<dynamic> query(String query, {Map<String, dynamic>? variables}) async {
+  Future<Map<String, dynamic>> query(String query, {Map<String, dynamic>? variables}) async {
     lastQuery = query;
     lastVariables = variables;
     return {
@@ -40,12 +38,9 @@ class FakeApiClient extends ApiClient {
 
 void main() {
   group('ArticleService', () {
-    late ArticleService articleService;
-    late FakeApiClient fakeApiClient;
 
     setUp(() {
-      fakeApiClient = FakeApiClient();
-      articleService = ArticleService(apiClient: fakeApiClient);
+      // fakeApiClient = FakeApiClient(); // Unused
     });
 
 

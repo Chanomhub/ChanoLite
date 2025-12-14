@@ -21,7 +21,7 @@ class AdminService {
   }
 
   Future<UserRoleResponse> addUserRole(int userId, AddUserRoleDto addUserRoleDto) async {
-    final data = await _apiClient.post('admin/users/$userId/roles', body: addUserRoleDto) as Map<String, dynamic>;
+    await _apiClient.post('admin/users/$userId/roles', body: addUserRoleDto);
     return UserRoleResponse();
   }
 

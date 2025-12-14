@@ -73,7 +73,6 @@ class AppTheme {
       case SeasonalPalette.christmas:
         return FlexScheme.mandyRed;
       case SeasonalPalette.standard:
-      default:
         return FlexScheme.deepPurple;
     }
   }

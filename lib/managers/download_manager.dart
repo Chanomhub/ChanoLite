@@ -16,9 +16,8 @@ import 'package:flutter/services.dart';
 @pragma('vm:entry-point')
 class DownloadManager extends ChangeNotifier {
   final List<DownloadTask> _tasks = [];
-  static const MethodChannel _platformChannel = MethodChannel(
-    'com.chanomhub.chanolite/download_notifications',
-  );
+
+
 
   static const String downloadPathKey = 'download_path';
   static const String metadataKey = 'download_metadata';
@@ -60,8 +59,6 @@ class DownloadManager extends ChangeNotifier {
         taskId,
         status: status,
         progress: status == DownloadTaskStatus.complete ? 1.0 : progress / 100.0,
-        persist: status == DownloadTaskStatus.complete ||
-            status == DownloadTaskStatus.failed,
       );
     });
   }
@@ -245,7 +242,6 @@ class DownloadManager extends ChangeNotifier {
       String taskId, {
         DownloadTaskStatus? status,
         double? progress,
-        bool persist = true,
       }) {
     final index = _tasks.indexWhere((task) => task.taskId == taskId);
     if (index != -1) {
@@ -265,7 +261,6 @@ class DownloadManager extends ChangeNotifier {
         String? fileName,
         DownloadType? type,
         String? taskId,
-        bool persist = true,
       }) {
     final index = _tasks.indexWhere((task) => task.url == url);
     if (index != -1) {
@@ -364,16 +359,6 @@ class DownloadManager extends ChangeNotifier {
     }
   }
 
-  Future<void> _notifyDownloadStarted(String fileName) async {
-    try {
-      await _platformChannel.invokeMethod(
-        'notifyDownloadStarted',
-        <String, dynamic>{'fileName': fileName},
-      );
-    } catch (_) {
-      // Ignore errors from the native notification layer.
-    }
-  }
 
   @override
   void dispose() {

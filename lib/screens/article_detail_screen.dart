@@ -16,7 +16,6 @@ import 'package:chanolite/models/article_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:ui';
 
-import 'package:chanolite/models/download.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
   final int articleId;
@@ -174,7 +173,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     }
 
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       body: CustomScrollView(
@@ -591,9 +589,12 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     final authToken = Provider.of<AuthManager>(context, listen: false).activeAccount?.token;
     final article = _article;
 
+    // Store the screen context before showing dialog
+    final screenContext = context;
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Open Link'),
           content: const Text('Choose how you want to open this link.'),
@@ -602,15 +603,15 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             TextButton(
               child: const Text('External Browser'),
               onPressed: () {
-                Navigator.of(context).pop();
-                _openLink(context, link.url, downloadManager, authToken, article, useExternalBrowser: true);
+                Navigator.of(dialogContext).pop();
+                _openLink(screenContext, link.url, downloadManager, authToken, article, useExternalBrowser: true);
               },
             ),
             FilledButton(
               child: const Text('In-App Browser'),
               onPressed: () {
-                Navigator.of(context).pop();
-                _openLink(context, link.url, downloadManager, authToken, article, useExternalBrowser: false);
+                Navigator.of(dialogContext).pop();
+                _openLink(screenContext, link.url, downloadManager, authToken, article, useExternalBrowser: false);
               },
             ),
           ],
@@ -632,11 +633,12 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       downloadManager: downloadManager,
       authToken: authToken,
       useExternalBrowser: useExternalBrowser,
-      onDownloadStart: (downloadStartRequest) async {
-        await LocalNotificationService.showNotification(
-          title: 'Download Detected',
-          body: 'A download has been detected and will begin shortly.',
-        );
+      onDownloadStart: (browser, downloadStartRequest) async {
+        // Close the browser to reveal the dialog
+        await browser.close();
+        
+        // Wait for the browser to fully close before showing the dialog
+        await Future.delayed(const Duration(milliseconds: 500));
 
         final fileName = InAppBrowserHelper.extractFilename(downloadStartRequest.contentDisposition) ??
             InAppBrowserHelper.getFilenameFromUrl(downloadStartRequest.url) ??

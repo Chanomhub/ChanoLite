@@ -1,7 +1,7 @@
 // test/permission_helper_test.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:device_info_plus_platform_interface/device_info_plus_platform_interface.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -16,7 +16,7 @@ import 'package:permission_handler_platform_interface/permission_handler_platfor
 class MockDeviceInfoPlatform extends Mock
     with MockPlatformInterfaceMixin
     implements DeviceInfoPlatform {
-  @override
+  // @override removed as it does not override inherited member in this version of the interface
   Future<AndroidDeviceInfo> get androidInfo =>
       super.noSuchMethod(
         Invocation.getter(#androidInfo),
@@ -80,7 +80,7 @@ class MockPermissionHandlerPlatform extends Mock
     );
   }
 
-  @override
+  // @override removed
   Future<bool> requestPermission(Permission permission) {
     return super.noSuchMethod(
       Invocation.method(#requestPermission, [permission]),
@@ -89,7 +89,7 @@ class MockPermissionHandlerPlatform extends Mock
     );
   }
 
-  @override
+  // @override removed
   Future<PermissionStatus> requestPermissionsExtend(List<Permission> permissions) {
     return super.noSuchMethod(
       Invocation.method(#requestPermissionsExtend, [permissions]),

@@ -136,21 +136,7 @@ class UpdateService {
     }
   }
 
-  /// เปรียบเทียบเวอร์ชัน
-  bool _isNewerVersion(String current, String latest) {
-    final currentParts = current.split('.').map(int.tryParse).toList();
-    final latestParts = latest.split('.').map(int.tryParse).toList();
 
-    for (int i = 0; i < 3; i++) {
-      final currentPart = i < currentParts.length ? (currentParts[i] ?? 0) : 0;
-      final latestPart = i < latestParts.length ? (latestParts[i] ?? 0) : 0;
-
-      if (latestPart > currentPart) return true;
-      if (latestPart < currentPart) return false;
-    }
-
-    return false;
-  }
 }
 
 class AppUpdateInfo {
