@@ -41,10 +41,21 @@ class UserService {
   }
 
   Future<User> login(String email, String password) async {
-    final data = await _apiClient.post('users/login', body: {
+    final response = await _apiClient.post('users/login', body: {
       'user': {'email': email, 'password': password}
-    }) as Map<String, dynamic>;;
-    return User.fromJson(data['user']);
+    }) as Map<String, dynamic>;
+
+    if (response['data'] != null) {
+      final data = response['data'];
+      final userMap = data['user'];
+      return User.fromJson(userMap).copyWith(
+        refreshToken: data['refreshToken'],
+        expiresIn: data['expiresIn'],
+      );
+    }
+    
+    // Fallback for old structure or unexpected format
+    return User.fromJson(response['user']);
   }
 
   /// Login using Supabase SSO token.

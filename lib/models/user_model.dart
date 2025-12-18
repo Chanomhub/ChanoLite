@@ -9,6 +9,8 @@ class User {
   final int points;
   final String? shrtflyApiKey;
   final String token;
+  final String? refreshToken;
+  final int? expiresIn;
   final List<SocialMediaLink> socialMediaLinks;
 
   User({
@@ -21,6 +23,8 @@ class User {
     required this.points,
     this.shrtflyApiKey,
     required this.token,
+    this.refreshToken,
+    this.expiresIn,
     required this.socialMediaLinks,
   });
 
@@ -35,6 +39,8 @@ class User {
       points: json['points'],
       shrtflyApiKey: json['shrtflyApiKey'],
       token: json['token'],
+      refreshToken: json['refreshToken'],
+      expiresIn: json['expiresIn'],
       socialMediaLinks: (json['socialMediaLinks'] as List? ?? [])
           .map((e) => SocialMediaLink.fromJson(e))
           .toList(),
@@ -52,6 +58,8 @@ class User {
       'points': points,
       'shrtflyApiKey': shrtflyApiKey,
       'token': token,
+      'refreshToken': refreshToken,
+      'expiresIn': expiresIn,
       'socialMediaLinks': socialMediaLinks.map((e) => e.toJson()).toList(),
     };
   }
@@ -66,6 +74,8 @@ class User {
     int? points,
     String? shrtflyApiKey,
     String? token,
+    String? refreshToken,
+    int? expiresIn,
     List<SocialMediaLink>? socialMediaLinks,
   }) {
     return User(
@@ -78,6 +88,8 @@ class User {
       points: points ?? this.points,
       shrtflyApiKey: shrtflyApiKey ?? this.shrtflyApiKey,
       token: token ?? this.token,
+      refreshToken: refreshToken ?? this.refreshToken,
+      expiresIn: expiresIn ?? this.expiresIn,
       socialMediaLinks: socialMediaLinks ?? this.socialMediaLinks,
     );
   }
