@@ -68,7 +68,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
-                <data android:host="chanomhub.online" />
+                <data android:host="chanomhub.com" />
             </intent-filter>
             <!-- Supabase OAuth callback -->
             <intent-filter>

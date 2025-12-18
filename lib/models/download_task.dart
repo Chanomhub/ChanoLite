@@ -24,6 +24,7 @@ class DownloadTask {
   final String? imageUrl;
   final String? version;
   final String? packageName; // Package name of installed app
+  final String? engine; // Game engine (e.g., 'RPG Maker MV', 'Ren\'Py')
 
   DownloadTask({
     required this.url,
@@ -36,6 +37,7 @@ class DownloadTask {
     this.imageUrl,
     this.version,
     this.packageName,
+    this.engine,
   });
 
   DownloadTask copyWith({
@@ -48,6 +50,7 @@ class DownloadTask {
     String? imageUrl,
     String? version,
     String? packageName,
+    String? engine,
   }) {
     return DownloadTask(
       url: url,
@@ -60,6 +63,7 @@ class DownloadTask {
       imageUrl: imageUrl ?? this.imageUrl,
       version: version ?? this.version,
       packageName: packageName ?? this.packageName,
+      engine: engine ?? this.engine,
     );
   }
 
@@ -75,6 +79,7 @@ class DownloadTask {
       imageUrl: json['imageUrl'] as String?,
       version: json['version'] as String?,
       packageName: json['packageName'] as String?,
+      engine: json['engine'] as String?,
     );
   }
 
@@ -90,6 +95,7 @@ class DownloadTask {
       'imageUrl': imageUrl,
       'version': version,
       'packageName': packageName,
+      'engine': engine,
     };
   }
 

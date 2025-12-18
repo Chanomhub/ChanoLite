@@ -3,7 +3,9 @@ import 'package:chanolite/theme/locale_notifier.dart';
 
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
+import 'package:chanolite/models/download_task.dart';
 import 'package:chanolite/services/api/article_service.dart';
+import 'package:chanolite/services/file_opener_service.dart';
 import 'package:chanolite/utils/url_helper.dart';
 import 'package:chanolite/utils/permission_helper.dart';
 import 'package:flutter/material.dart';
@@ -628,12 +630,19 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     Article article, {
     required bool useExternalBrowser,
   }) {
+    // Store a reference to the navigator context before opening browser
+    final navigatorContext = Navigator.of(context).context;
+    
     InAppBrowserHelper.openUrl(
       url,
       downloadManager: downloadManager,
       authToken: authToken,
       useExternalBrowser: useExternalBrowser,
       onDownloadStart: (browser, downloadStartRequest, cookies) async {
+        debugPrint('ArticleDetailScreen: onDownloadStart triggered');
+        debugPrint('ArticleDetailScreen: URL = ${downloadStartRequest.url}');
+        debugPrint('ArticleDetailScreen: suggestedFilename = ${downloadStartRequest.suggestedFilename}');
+        
         // Close the browser to reveal the dialog
         await browser.close();
         
@@ -644,52 +653,154 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             InAppBrowserHelper.getFilenameFromUrl(downloadStartRequest.url) ??
             downloadStartRequest.suggestedFilename;
         
-        if (context.mounted) {
+        final isApk = fileName?.toLowerCase().endsWith('.apk') ?? false;
+        
+        debugPrint('ArticleDetailScreen: Resolved fileName = $fileName');
+        debugPrint('ArticleDetailScreen: isApk = $isApk');
+        debugPrint('ArticleDetailScreen: context.mounted = ${context.mounted}');
+        debugPrint('ArticleDetailScreen: navigatorContext.mounted = ${navigatorContext.mounted}');
+        
+        // Try using the navigator context if the original context is no longer mounted
+        final dialogContext = context.mounted ? context : navigatorContext;
+        
+        if (dialogContext.mounted) {
+            debugPrint('ArticleDetailScreen: Showing download dialog');
             showDialog(
-              context: context,
-              builder: (BuildContext dialogContext) {
+              context: dialogContext,
+              builder: (BuildContext dialogCtx) {
                 return AlertDialog(
                   title: const Text('Confirm Download'),
-                  content: Text('Do you want to download this file?\n\n$fileName'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Do you want to download this file?\n\n$fileName'),
+                      if (isApk) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(dialogCtx).colorScheme.primaryContainer.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 16, color: Theme.of(dialogCtx).colorScheme.primary),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'APK will be opened for installation after download.',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   actions: <Widget>[
                     TextButton(
                       child: const Text('Cancel'),
-                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      onPressed: () => Navigator.of(dialogCtx).pop(),
                     ),
+                    if (!isApk)
+                      TextButton(
+                        child: const Text('Download Only'),
+                        onPressed: () {
+                          Navigator.of(dialogCtx).pop();
+                          _startDownload(dialogContext, downloadManager, downloadStartRequest, cookies, article, fileName, openAfterDownload: false);
+                        },
+                      ),
                     FilledButton(
-                      child: const Text('Download'),
+                      child: Text(isApk ? 'Download & Install' : 'Download & Open'),
                       onPressed: () {
-                        Navigator.of(dialogContext).pop();
-                        downloadManager.startDownload(
-                          downloadStartRequest.url.toString(),
-                          suggestedFilename: fileName,
-                          cookies: cookies,
-                          imageUrl: article.coverImage ?? article.mainImage,
-                          version: article.ver?.toString(),
-                        );
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Download started!'),
-                            action: SnackBarAction(
-                              label: 'LIBRARY',
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (context) => const GameLibraryScreen()),
-                                );
-                              },
-                            ),
-                          ),
-                        );
+                        Navigator.of(dialogCtx).pop();
+                        _startDownload(dialogContext, downloadManager, downloadStartRequest, cookies, article, fileName, openAfterDownload: true);
                       },
                     ),
                   ],
                 );
               },
             );
+        } else {
+          debugPrint('ArticleDetailScreen: Unable to show dialog - context not mounted');
+          // Fallback: Just start download directly
+          downloadManager.startDownload(
+            downloadStartRequest.url.toString(),
+            suggestedFilename: fileName,
+            cookies: cookies,
+            imageUrl: article.coverImage ?? article.mainImage,
+            version: article.ver?.toString(),
+            engine: article.engine,
+          );
+          debugPrint('ArticleDetailScreen: Download started directly (fallback)');
         }
       },
     );
+  }
+
+  void _startDownload(
+    BuildContext dialogContext,
+    DownloadManager downloadManager,
+    dynamic downloadStartRequest,
+    String? cookies,
+    Article article,
+    String? fileName, {
+    required bool openAfterDownload,
+  }) {
+    downloadManager.startDownload(
+      downloadStartRequest.url.toString(),
+      suggestedFilename: fileName,
+      cookies: cookies,
+      imageUrl: article.coverImage ?? article.mainImage,
+      version: article.ver?.toString(),
+      engine: article.engine,
+    );
+
+    if (dialogContext.mounted) {
+      ScaffoldMessenger.of(dialogContext).showSnackBar(
+        SnackBar(
+          content: Text(openAfterDownload 
+            ? 'Download started! Will open when complete.'
+            : 'Download started!'),
+          action: SnackBarAction(
+            label: 'LIBRARY',
+            onPressed: () {
+              Navigator.of(dialogContext).push(
+                MaterialPageRoute(builder: (context) => const GameLibraryScreen()),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // If openAfterDownload is true, listen for download completion
+    if (openAfterDownload && fileName != null) {
+      _waitForDownloadAndOpen(downloadManager, downloadStartRequest.url.toString(), fileName);
+    }
+  }
+
+  void _waitForDownloadAndOpen(DownloadManager downloadManager, String url, String fileName) {
+    // Listen for changes in the download manager
+    void listener() {
+      final task = downloadManager.tasks.where((t) => t.url == url).firstOrNull;
+      if (task != null && task.status == DownloadTaskStatus.complete && task.filePath != null) {
+        // Remove listener first
+        downloadManager.removeListener(listener);
+        
+        // Open the file
+        debugPrint('ArticleDetailScreen: Download complete, opening file: ${task.filePath}');
+        FileOpenerService.openFile(task.filePath!);
+      } else if (task != null && task.status == DownloadTaskStatus.failed) {
+        // Remove listener on failure too
+        downloadManager.removeListener(listener);
+        debugPrint('ArticleDetailScreen: Download failed');
+      }
+    }
+    
+    downloadManager.addListener(listener);
   }
 }

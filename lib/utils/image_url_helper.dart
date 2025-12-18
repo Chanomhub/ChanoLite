@@ -13,7 +13,7 @@ class ImageUrlHelper {
   /// Examples:
   /// ```dart
   /// resolve('/abc123.jpg') 
-  ///   => 'https://cdn.chanomhub.online/abc123.jpg'
+  ///   => 'https://cdn.chanomhub.com/abc123.jpg'
   /// 
   /// resolve('https://example.com/img.jpg') 
   ///   => 'https://example.com/img.jpg'

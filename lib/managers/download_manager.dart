@@ -36,24 +36,32 @@ class DownloadManager extends ChangeNotifier {
   ];
 
   DownloadManager() {
+    print('DownloadManager: Constructor called');
     _bindBackgroundIsolate();
     downloader.FlutterDownloader.registerCallback(downloadCallback);
+    print('DownloadManager: Callback registered');
   }
 
   void _bindBackgroundIsolate() {
+    print('DownloadManager: Binding background isolate...');
     final isSuccess = IsolateNameServer.registerPortWithName(
       _port.sendPort,
       'downloader_send_port',
     );
+    print('DownloadManager: Port registration success: $isSuccess');
     if (!isSuccess) {
+      print('DownloadManager: Port already registered, rebinding...');
       _unbindBackgroundIsolate();
       _bindBackgroundIsolate();
       return;
     }
     _port.listen((dynamic data) {
+      print('=== DownloadManager: RECEIVED MESSAGE FROM ISOLATE ===');
+      print('Data: $data');
       final taskId = data[0] as String;
       final status = _intToStatus(data[1] as int);
       final progress = data[2] as int;
+      print('TaskId: $taskId, Status: ${status.name}, Progress: $progress%');
 
       _updateTaskByTaskId(
         taskId,
@@ -61,9 +69,11 @@ class DownloadManager extends ChangeNotifier {
         progress: status == DownloadTaskStatus.complete ? 1.0 : progress / 100.0,
       );
     });
+    print('DownloadManager: Port listener attached');
   }
 
   void _unbindBackgroundIsolate() {
+    print('DownloadManager: Unbinding background isolate');
     IsolateNameServer.removePortNameMapping('downloader_send_port');
   }
 
@@ -90,8 +100,16 @@ class DownloadManager extends ChangeNotifier {
 
   @pragma('vm:entry-point')
   static void downloadCallback(String id, int status, int progress) {
+    print('=== DownloadManager.downloadCallback CALLED (BACKGROUND ISOLATE) ===');
+    print('TaskId: $id, Status: $status, Progress: $progress');
     final SendPort? send = IsolateNameServer.lookupPortByName('downloader_send_port');
-    send?.send([id, status, progress]);
+    print('SendPort found: ${send != null}');
+    if (send != null) {
+      send.send([id, status, progress]);
+      print('Message sent to main isolate');
+    } else {
+      print('ERROR: SendPort not found!');
+    }
   }
 
   Future<void> loadTasks() async {
@@ -108,9 +126,21 @@ class DownloadManager extends ChangeNotifier {
         : {};
 
     final List<DownloadTask> newTasks = [];
+    final List<String> taskIdsToRemove = [];
+
     for (final task in downloaderTasks) {
       final fileName = task.filename;
       if (fileName == null) continue;
+
+      final status = _intToStatus(task.status.index);
+
+      // Skip enqueued tasks with 0 progress that are likely stale
+      // (URL probably expired, never started)
+      if (status == DownloadTaskStatus.enqueued && task.progress == 0) {
+        print('DownloadManager: Removing stale enqueued task: ${task.url}');
+        taskIdsToRemove.add(task.taskId);
+        continue;
+      }
 
       final type = _archiveExtensions.any(
             (ext) => fileName.toLowerCase().endsWith(ext),
@@ -118,14 +148,12 @@ class DownloadManager extends ChangeNotifier {
           ? DownloadType.archive
           : DownloadType.file;
 
-      // Retrieve metadata using URL as key (or taskId if available and stable)
-      // Using URL is safer across reinstalls if taskId changes, but taskId is unique.
-      // Let's try to match by URL first as it's the most stable identifier we have from the start.
+      // Retrieve metadata using URL as key
       final metadata = metadataMap[task.url] as Map<String, dynamic>?;
 
       final localTask = DownloadTask(
         url: task.url,
-        status: _intToStatus(task.status.index),
+        status: status,
         progress: task.progress / 100.0,
         filePath: task.savedDir + Platform.pathSeparator + fileName,
         fileName: fileName,
@@ -133,8 +161,18 @@ class DownloadManager extends ChangeNotifier {
         taskId: task.taskId,
         imageUrl: metadata?['imageUrl'],
         version: metadata?['version'],
+        engine: metadata?['engine'],
       );
       newTasks.add(localTask);
+    }
+
+    // Clean up stale tasks
+    for (final taskId in taskIdsToRemove) {
+      try {
+        await downloader.FlutterDownloader.remove(taskId: taskId);
+      } catch (e) {
+        print('DownloadManager: Error removing stale task $taskId: $e');
+      }
     }
 
     _tasks
@@ -143,22 +181,44 @@ class DownloadManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clear all stuck/failed downloads
+  Future<void> clearStuckDownloads() async {
+    final tasksToRemove = _tasks.where((task) => 
+      task.status == DownloadTaskStatus.enqueued ||
+      task.status == DownloadTaskStatus.failed ||
+      task.status == DownloadTaskStatus.canceled
+    ).toList();
+
+    for (final task in tasksToRemove) {
+      await deleteTask(task);
+    }
+  }
+
   Future<void> startDownload(
       String url, {
         String? suggestedFilename,
         String? cookies,
         String? imageUrl,
         String? version,
+        String? engine,
       }) async {
+    print('=== DownloadManager.startDownload START ===');
+    print('URL: $url');
+    print('Filename: $suggestedFilename');
+    print('Has cookies: ${cookies?.isNotEmpty ?? false}');
+    
     if (_tasks.any((task) =>
     task.url == url &&
         (task.status == DownloadTaskStatus.running ||
             task.status == DownloadTaskStatus.enqueued))) {
+      print('DownloadManager: Task already exists for this URL, skipping');
       return;
     }
 
     // Request storage permission
+    print('DownloadManager: Requesting storage permission...');
     final hasPermission = await PermissionHelper.requestStoragePermission();
+    print('DownloadManager: Permission granted: $hasPermission');
     if (!hasPermission) {
       print('Storage permission not granted. Cannot start download.');
       return;
@@ -166,23 +226,28 @@ class DownloadManager extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     String? savePath = prefs.getString(downloadPathKey);
+    print('DownloadManager: Custom save path: $savePath');
 
     if (savePath == null) {
       if (Platform.isAndroid) {
-        final directory = await getDownloadsDirectory(); // Use getDownloadsDirectory for Android
+        final directory = await getDownloadsDirectory();
         savePath = directory?.path;
+        print('DownloadManager: Android downloads directory: $savePath');
       } else {
         final directory = await getApplicationDocumentsDirectory();
         savePath = directory.path;
+        print('DownloadManager: Documents directory: $savePath');
       }
     }
 
     if (savePath == null) {
-      print('Could not determine a save path. Cannot start download.');
+      print('ERROR: Could not determine a save path. Cannot start download.');
       return;
     }
 
     final fileName = suggestedFilename ?? path.basename(url.split('?').first);
+    print('DownloadManager: Final filename: $fileName');
+    print('DownloadManager: Save path: $savePath');
 
     final type = _archiveExtensions.any(
           (ext) => fileName.toLowerCase().endsWith(ext),
@@ -191,7 +256,7 @@ class DownloadManager extends ChangeNotifier {
         : DownloadType.file;
 
     // Save metadata
-    if (imageUrl != null || version != null) {
+    if (imageUrl != null || version != null || engine != null) {
       final metadataString = prefs.getString(metadataKey);
       final Map<String, dynamic> metadataMap = metadataString != null
           ? json.decode(metadataString)
@@ -200,9 +265,11 @@ class DownloadManager extends ChangeNotifier {
       metadataMap[url] = {
         'imageUrl': imageUrl,
         'version': version,
+        'engine': engine,
       };
       
       await prefs.setString(metadataKey, json.encode(metadataMap));
+      print('DownloadManager: Saved metadata');
     }
 
     try {
@@ -213,6 +280,12 @@ class DownloadManager extends ChangeNotifier {
         print('DownloadManager: Using browser cookies: $cookies');
       }
 
+      print('DownloadManager: Calling FlutterDownloader.enqueue...');
+      print('  - url: $url');
+      print('  - savedDir: $savePath');
+      print('  - fileName: $fileName');
+      print('  - headers: $headers');
+      
       final taskId = await downloader.FlutterDownloader.enqueue(
         url: url,
         savedDir: savePath,
@@ -220,8 +293,10 @@ class DownloadManager extends ChangeNotifier {
         headers: headers,
         showNotification: true,
         openFileFromNotification: true,
-        saveInPublicStorage: true, // Important for public access on newer Android versions
+        saveInPublicStorage: true,
       );
+
+      print('DownloadManager: FlutterDownloader.enqueue returned taskId: $taskId');
 
       if (taskId != null) {
         final filePath = path.join(savePath, fileName);
@@ -234,12 +309,18 @@ class DownloadManager extends ChangeNotifier {
           taskId: taskId,
           imageUrl: imageUrl,
           version: version,
+          engine: engine,
         );
         _tasks.add(task);
+        print('DownloadManager: Task added to list. Total tasks: ${_tasks.length}');
         notifyListeners();
+        print('=== DownloadManager.startDownload SUCCESS ===');
+      } else {
+        print('ERROR: FlutterDownloader.enqueue returned null taskId!');
       }
-    } catch (e) {
-      print('Error starting download: $e');
+    } catch (e, stackTrace) {
+      print('ERROR starting download: $e');
+      print('Stack trace: $stackTrace');
     }
   }
 
@@ -386,10 +467,30 @@ class DownloadManager extends ChangeNotifier {
     }
   }
 
+  Future<void> cancelTask(DownloadTask task) async {
+    if (task.taskId != null && 
+        (task.status == DownloadTaskStatus.running || 
+         task.status == DownloadTaskStatus.enqueued)) {
+      await downloader.FlutterDownloader.cancel(taskId: task.taskId!);
+      _updateTask(task.url, status: DownloadTaskStatus.canceled);
+    }
+  }
+
   Future<void> retryTask(DownloadTask task) async {
-    if (task.status == DownloadTaskStatus.failed) {
+    if (task.status == DownloadTaskStatus.failed || 
+        task.status == DownloadTaskStatus.canceled) {
+      final fileName = task.fileName;
+      final imageUrl = task.imageUrl;
+      final version = task.version;
+      final engine = task.engine;
       await deleteTask(task);
-      await startDownload(task.url, suggestedFilename: task.fileName);
+      await startDownload(
+        task.url, 
+        suggestedFilename: fileName,
+        imageUrl: imageUrl,
+        version: version,
+        engine: engine,
+      );
     }
   }
 

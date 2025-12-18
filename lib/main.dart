@@ -15,6 +15,7 @@ import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/screens/search_screen.dart';
 import 'package:chanolite/screens/settings_screen.dart';
+import 'package:chanolite/screens/tools_screen.dart';
 import 'package:chanolite/theme/app_theme.dart';
 import 'package:chanolite/theme/theme_notifier.dart';
 import 'package:chanolite/widgets/global_download_indicator.dart';
@@ -230,6 +231,7 @@ class _MainScreenState extends State<MainScreen> {
     const HomeScreen(),
     const SearchScreen(),
     const GameLibraryScreen(),
+    const ToolsScreen(),
     const SettingsScreen(),
   ];
 
@@ -271,6 +273,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.games),
             label: 'Library',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.build),
+            label: 'Tools',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),

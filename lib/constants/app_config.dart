@@ -5,8 +5,8 @@ class AppConfig {
 
   /// Base URL for the CDN. 
   /// Images that start with '/' will be prefixed with this URL.
-  static const String cdnBaseUrl = 'https://cdn.chanomhub.online';
+  static const String cdnBaseUrl = 'https://cdn.chanomhub.com';
 
   /// API base URL
-  static const String apiBaseUrl = 'https://api.chanomhub.online';
+  static const String apiBaseUrl = 'https://api.chanomhub.com';
 }

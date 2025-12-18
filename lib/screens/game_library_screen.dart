@@ -7,6 +7,8 @@ import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/services/file_opener_service.dart';
 import 'package:chanolite/services/installed_apps_service.dart';
+import 'package:chanolite/services/game_tools_service.dart';
+import 'package:chanolite/widgets/tool_selection_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -58,6 +60,8 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
 
   void _showContextMenu(BuildContext context, DownloadTask task) {
     final isApk = task.fileName?.toLowerCase().endsWith('.apk') ?? false;
+    final hasEngine = task.engine != null && task.engine!.isNotEmpty;
+    final downloadManager = Provider.of<DownloadManager>(context, listen: false);
     
     showModalBottomSheet(
       context: context,
@@ -68,19 +72,31 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
               leading: const Icon(Icons.edit),
               title: const Text('Rename'),
               onTap: () {
-                Navigator.of(context).pop(); // Close the bottom sheet
-                _showRenameDialog(context, task); // Show rename dialog
+                Navigator.of(context).pop();
+                _showRenameDialog(context, task);
               },
             ),
+            // Open/Install option for completed downloads
             if (task.status == DownloadTaskStatus.complete)
               ListTile(
                 leading: const Icon(Icons.open_in_new),
                 title: Text(isApk ? 'Install APK' : 'Open'),
                 onTap: () {
-                  Navigator.of(context).pop(); // Close the bottom sheet
+                  Navigator.of(context).pop();
                   if (task.filePath != null) {
                     FileOpenerService.openFile(task.filePath!);
                   }
+                },
+              ),
+            // Play with Tool option (for games with engine info)
+            if (task.status == DownloadTaskStatus.complete && hasEngine && !isApk)
+              ListTile(
+                leading: const Icon(Icons.sports_esports),
+                title: const Text('Play with Tool'),
+                subtitle: Text('Engine: ${task.engine}'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _playWithTool(context, task);
                 },
               ),
             // Launch installed app option (only for APK with package name)
@@ -98,19 +114,158 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
                   }
                 },
               ),
+            // Retry option for failed or stuck downloads
+            if (task.status == DownloadTaskStatus.failed || 
+                task.status == DownloadTaskStatus.canceled)
+              ListTile(
+                leading: const Icon(Icons.refresh),
+                title: const Text('Retry Download'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  downloadManager.retryTask(task);
+                },
+              ),
+            // Cancel option for running/enqueued downloads
+            if (task.status == DownloadTaskStatus.running ||
+                task.status == DownloadTaskStatus.enqueued)
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel Download'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  downloadManager.cancelTask(task);
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.delete),
               title: const Text('Delete'),
               onTap: () {
-                Navigator.of(context).pop(); // Close the bottom sheet
-                // Get the DownloadManager and call the delete method
-                Provider.of<DownloadManager>(context, listen: false).deleteTask(task);
+                Navigator.of(context).pop();
+                downloadManager.deleteTask(task);
+              },
+            ),
+            const Divider(),
+            // Debug Info option
+            ListTile(
+              leading: const Icon(Icons.bug_report),
+              title: const Text('Debug Info'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showDebugInfo(context, task);
               },
             ),
           ],
         );
       },
     );
+  }
+
+  void _showDebugInfo(BuildContext context, DownloadTask task) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Download Debug Info'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _debugRow('Status', task.status.name),
+              _debugRow('Progress', '${(task.progress * 100).toStringAsFixed(1)}%'),
+              _debugRow('TaskId', task.taskId ?? 'null'),
+              _debugRow('FileName', task.fileName ?? 'null'),
+              _debugRow('FilePath', task.filePath ?? 'null'),
+              _debugRow('Type', task.type.name),
+              _debugRow('Engine', task.engine ?? 'null'),
+              _debugRow('Version', task.version ?? 'null'),
+              _debugRow('PackageName', task.packageName ?? 'null'),
+              const Divider(),
+              const Text('URL:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SelectableText(task.url, style: const TextStyle(fontSize: 10)),
+              const Divider(),
+              const Text('ImageUrl:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SelectableText(task.imageUrl ?? 'null', style: const TextStyle(fontSize: 10)),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _debugRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          Expanded(
+            child: SelectableText(value, style: const TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _playWithTool(BuildContext context, DownloadTask task) async {
+    if (task.engine == null || task.filePath == null) return;
+
+    // Get installed tools for this engine
+    final installedTools = await GameToolsService.getInstalledToolsForEngine(task.engine!);
+
+    if (!context.mounted) return;
+
+    if (installedTools.isEmpty) {
+      // No tools installed - show message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No tools installed for ${task.engine} games'),
+          action: SnackBarAction(
+            label: 'Get Tools',
+            onPressed: () {
+              // Navigate to tools tab (index 3)
+              // Find MainScreen's state and update tab
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
+    bool success;
+    if (installedTools.length == 1) {
+      // Only one tool - launch directly
+      success = await GameToolsService.launchGameWithTool(installedTools.first, task.filePath!);
+    } else {
+      // Multiple tools - show selection dialog
+      final selectedTool = await ToolSelectionDialog.show(
+        context,
+        tools: installedTools,
+        gamePath: task.filePath,
+        engineName: task.engine,
+      );
+
+      if (selectedTool != null) {
+        success = await GameToolsService.launchGameWithTool(selectedTool, task.filePath!);
+      } else {
+        return; // User cancelled
+      }
+    }
+
+    if (!success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to launch game with tool')),
+      );
+    }
   }
 
   @override
@@ -147,6 +302,30 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
           : AppBar(
               title: const Text('Game Library'),
               actions: [
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    if (value == 'clear_stuck') {
+                      final downloadManager = Provider.of<DownloadManager>(context, listen: false);
+                      downloadManager.clearStuckDownloads();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Cleared stuck downloads')),
+                      );
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'clear_stuck',
+                      child: Row(
+                        children: [
+                          Icon(Icons.cleaning_services),
+                          SizedBox(width: 8),
+                          Text('Clear Stuck Downloads'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 Consumer<AuthManager>(
                   builder: (context, auth, _) {
                     final theme = Theme.of(context);
