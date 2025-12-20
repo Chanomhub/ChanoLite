@@ -14,6 +14,8 @@ class ApiClient {
     _authToken = token;
   }
 
+  static String? get authToken => _authToken;
+
   Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
     final uri = Uri.parse('$baseUrl/$endpoint');
     // print('GET: $uri'); // Debug print

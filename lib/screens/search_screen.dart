@@ -3,7 +3,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chanolite/utils/image_url_helper.dart';
-import 'package:chanolite/services/api/article_service.dart';
+import 'package:chanolite/repositories/article_repository.dart';
 import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/theme/app_theme.dart';
 import 'package:chanolite/theme/theme_notifier.dart';
@@ -57,7 +57,7 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final ArticleService _articleService = ArticleService();
+  late final ArticleRepository _articleRepository;
   final CacheService _cacheService = CacheService();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -91,6 +91,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
+    _articleRepository = context.read<ArticleRepository>();
     _searchController.text = widget.initialQuery ?? '';
     _selectedTag = widget.initialTag;
     _selectedCategory = widget.initialCategory;
@@ -214,7 +215,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   ''';
 
-      final response = await _articleService.getArticles(
+      final response = await _articleRepository.getArticles(
         limit: _limit,
         offset: _offset,
         query: query,

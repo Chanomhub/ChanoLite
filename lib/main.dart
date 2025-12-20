@@ -25,7 +25,7 @@ import 'package:chanolite/services/notification_service.dart';
 import 'package:chanolite/services/local_notification_service.dart';
 import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/screens/article_detail_screen.dart';
-import 'package:chanolite/services/api/article_service.dart';
+import 'package:chanolite/repositories/article_repository.dart';
 import 'package:chanolite/theme/locale_notifier.dart';
 import 'package:chanolite/l10n/generated/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -150,7 +150,7 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         Provider<CacheService>(create: (_) => CacheService()),
-        Provider<ArticleService>(create: (_) => ArticleService()),
+        Provider<ArticleRepository>(create: (_) => ArticleRepository()),
         ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: authManager),
         ChangeNotifierProvider(create: (_) => ThemeNotifier(ThemeMode.dark)),

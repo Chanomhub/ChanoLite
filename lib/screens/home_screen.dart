@@ -3,7 +3,7 @@ import 'package:chanolite/utils/image_url_helper.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';
-import 'package:chanolite/services/api/article_service.dart';
+import 'package:chanolite/repositories/article_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -24,7 +24,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ArticleService _articleService = ArticleService();
+  late final ArticleRepository _articleRepository;
 
   List<Article> _articles = [];
   List<Article> _unreleasedApps = [];
@@ -37,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _articleRepository = context.read<ArticleRepository>();
     _loadArticles();
   }
 
@@ -87,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required int limit,
     String? status,
   }) async {
-    final response = await _articleService.getArticles(
+    final response = await _articleRepository.getArticles(
       limit: limit,
       status: status,
       returnFields: _homeArticleFields,

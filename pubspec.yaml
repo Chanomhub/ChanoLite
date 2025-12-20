@@ -66,6 +66,7 @@ dependencies:
   installed_apps: ^2.0.0
   supabase_flutter: ^2.10.0
   flutter_dotenv: ^5.2.1
+  chopper: ^8.4.0
 
 
 dev_dependencies:
@@ -81,6 +82,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  chopper_generator: ^8.4.0
 
 flutter_launcher_icons:
   android: "launcher_icon"

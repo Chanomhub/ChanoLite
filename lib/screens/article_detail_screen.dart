@@ -4,7 +4,7 @@ import 'package:chanolite/theme/locale_notifier.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/models/download_task.dart';
-import 'package:chanolite/services/api/article_service.dart';
+import 'package:chanolite/repositories/article_repository.dart';
 import 'package:chanolite/services/file_opener_service.dart';
 import 'package:chanolite/utils/url_helper.dart';
 import 'package:chanolite/utils/permission_helper.dart';
@@ -99,7 +99,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     });
 
     final cacheService = Provider.of<CacheService>(context, listen: false);
-    final service = Provider.of<ArticleService>(context, listen: false);
+    final service = Provider.of<ArticleRepository>(context, listen: false);
     final cacheKey = 'article_${widget.articleId}_${language.languageCode}';
 
     // Try cache first
