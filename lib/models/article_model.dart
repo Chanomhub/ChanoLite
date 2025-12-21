@@ -1,4 +1,5 @@
 import 'package:chanolite/models/download.dart';
+import 'package:chanolite/utils/image_url_helper.dart';
 
 class ArticlesResponse {
   final List<Article> articles;
@@ -111,27 +112,29 @@ class Article {
       updatedAt: DateTime.parse(json['updatedAt']),
       status: json['status'],
       engine: json['engine']?['name'] as String?,
-      mainImage: json['mainImage'],
+      mainImage: ImageUrlHelper.resolve(json['mainImage']),
       images: (() {
         final dynamic imagesData = json['images'];
         if (imagesData == null) {
           return <String>[];
         } else if (imagesData is List) {
           return imagesData.map<String>((e) {
+            String? url;
             if (e is Map && e.containsKey('url')) {
-              return e['url'] as String;
+              url = e['url'] as String?;
             } else if (e is String) {
-              return e;
+              url = e;
             }
-            return ''; // Default or error handling for unexpected types in list
+            return ImageUrlHelper.resolve(url) ?? '';
           }).where((element) => element.isNotEmpty).toList();
         } else if (imagesData is Map && imagesData.containsKey('url')) {
-          return [imagesData['url'] as String];
+          final url = ImageUrlHelper.resolve(imagesData['url'] as String?);
+          return url != null ? [url] : <String>[];
         }
-        return <String>[]; // Default for unexpected types
+        return <String>[]; 
       })(),
-      backgroundImage: json['backgroundImage'],
-      coverImage: json['coverImage'],
+      backgroundImage: ImageUrlHelper.resolve(json['backgroundImage']),
+      coverImage: ImageUrlHelper.resolve(json['coverImage']),
       tagList: (json['tags'] != null)
           ? (json['tags'] as List).map((e) => e['name'] as String).toList()
           : List<String>.from(json['tagList'] ?? []),
@@ -273,7 +276,7 @@ class Author {
     return Author(
       id: json['id'],
       name: json['name'] ?? json['username'],
-      image: json['image'],
+      image: ImageUrlHelper.resolve(json['image']),
     );
   }
 
