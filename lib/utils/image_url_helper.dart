@@ -32,11 +32,11 @@ class ImageUrlHelper {
 
     // Relative URL starting with /
     if (url.startsWith('/')) {
-      return '${AppConfig.cdnBaseUrl}$url';
+      return '${AppConfig.cdnBaseUrl}${AppConfig.cdnOptimizationPath}$url';
     }
 
     // Relative URL without leading slash - add it
-    return '${AppConfig.cdnBaseUrl}/$url';
+    return '${AppConfig.cdnBaseUrl}${AppConfig.cdnOptimizationPath}/$url';
   }
 
   /// Resolves multiple image URLs.
