@@ -73,7 +73,7 @@ final class _$UserApiService extends UserApiService {
 
   @override
   Future<Response<dynamic>> loginWithSSO(Map<String, dynamic> body) {
-    final Uri $url = Uri.parse('/users/sso');
+    final Uri $url = Uri.parse('/users/login-supabase');
     final $body = body;
     final Request $request = Request('POST', $url, client.baseUrl, body: $body);
     return client.send<dynamic, dynamic>($request);

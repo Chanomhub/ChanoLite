@@ -33,8 +33,9 @@ class SupabaseAuthService {
   Future<AuthResponse> signInWithGoogle() async {
     final response = await _client.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: 'com.chanomhub.chanolite://login-callback',
+      redirectTo: 'com.chanomhub.chanolite.chanolite://login-callback',
       authScreenLaunchMode: LaunchMode.externalApplication,
+      queryParams: {'prompt': 'select_account'},
     );
 
     if (!response) {
@@ -66,7 +67,7 @@ class SupabaseAuthService {
 
   /// Handle deep link callback from OAuth.
   Future<AuthSessionUrlResponse?> handleDeepLink(Uri uri) async {
-    if (uri.scheme == 'com.chanomhub.chanolite' && uri.host == 'login-callback') {
+    if (uri.scheme == 'com.chanomhub.chanolite.chanolite' && uri.host == 'login-callback') {
       final response = await _client.auth.getSessionFromUrl(uri);
       return response;
     }

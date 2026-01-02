@@ -94,8 +94,18 @@ class UserService {
       'token': supabaseToken,
     });
     _checkResponse(response);
-    final data = response.body as Map<String, dynamic>;
-    return User.fromJson(data['user']);
+    final responseBody = response.body as Map<String, dynamic>;
+
+    if (responseBody['data'] != null) {
+      final data = responseBody['data'];
+      final userMap = data['user'];
+      return User.fromJson(userMap).copyWith(
+        refreshToken: data['refreshToken'],
+        expiresIn: data['expiresIn'],
+      );
+    }
+    
+    return User.fromJson(responseBody['user']);
   }
 
   // Profile
@@ -123,7 +133,8 @@ class UserService {
 
   void _checkResponse(Response response) {
     if (!response.isSuccessful) {
-      throw Exception('Request failed: ${response.statusCode} ${response.error}');
+      print('Request failed: Status=${response.statusCode} Error=${response.error} Body=${response.body}');
+      throw Exception('Request failed: ${response.statusCode} ${response.error} body: ${response.body}');
     }
   }
 }

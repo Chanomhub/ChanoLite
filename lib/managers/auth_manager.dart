@@ -109,6 +109,9 @@ class AuthManager extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Clear any existing auth token to avoid sending stale credentials to the backend
+      ApiClient.updateAuthToken(null);
+
       // Initiate Google OAuth flow
       await supabaseAuth.signInWithGoogle();
 
@@ -119,6 +122,11 @@ class AuthManager extends ChangeNotifier {
       }
 
       // Exchange Supabase token with backend
+      print('Exchanging Supabase token for backend session... Token length: ${accessToken.length}');
+      
+      // Some backends require the Supabase token in the Authorization header
+      ApiClient.updateAuthToken(accessToken);
+      
       final user = await _userService.loginWithSSO(accessToken);
       await _addOrUpdateAccount(user);
       await _setActive(user);
