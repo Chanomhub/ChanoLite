@@ -63,13 +63,31 @@ jobs:
         if: steps.check_release.outputs.exists == 'false'
         run: flutter pub get
 
+      - name: Download Android Keystore
+        if: steps.check_release.outputs.exists == 'false'
+        id: android_keystore
+        uses: timheuer/base64-to-file@v1.2
+        with:
+          fileName: upload-keystore.jks
+          encodedString: ${{ secrets.KEYSTORE_BASE64 }}
+
       - name: Build APK
         if: steps.check_release.outputs.exists == 'false'
         run: flutter build apk --release
+        env:
+          STORE_FILE: ${{ steps.android_keystore.outputs.filePath }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Build App Bundle
         if: steps.check_release.outputs.exists == 'false'
         run: flutter build appbundle --release
+        env:
+          STORE_FILE: ${{ steps.android_keystore.outputs.filePath }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Get short SHA
         if: steps.check_release.outputs.exists == 'false'

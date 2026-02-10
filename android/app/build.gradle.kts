@@ -49,6 +49,18 @@ android {
                 keyPassword = keystoreProperties.getProperty("keyPassword")
                 storeFile = file(keystoreProperties.getProperty("storeFile"))
                 storePassword = keystoreProperties.getProperty("storePassword")
+            } else {
+                val keyAliasEnv = System.getenv("KEY_ALIAS")
+                val keyPasswordEnv = System.getenv("KEY_PASSWORD")
+                val storeFileEnv = System.getenv("STORE_FILE")
+                val storePasswordEnv = System.getenv("STORE_PASSWORD")
+
+                if (keyAliasEnv != null && keyPasswordEnv != null && storeFileEnv != null && storePasswordEnv != null) {
+                    keyAlias = keyAliasEnv
+                    keyPassword = keyPasswordEnv
+                    storeFile = file(storeFileEnv)
+                    storePassword = storePasswordEnv
+                }
             }
         }
     }
