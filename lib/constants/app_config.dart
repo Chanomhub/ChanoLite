@@ -7,8 +7,12 @@ class AppConfig {
   /// Images that start with '/' will be prefixed with this URL.
   static const String cdnBaseUrl = 'https://cdn.chanomhub.com';
   
-  /// Cloudflare image resizing/formatting path
-  static const String cdnOptimizationPath = '/cdn-cgi/image/format=auto';
+  /// Imgproxy base URL
+  static const String imgproxyBaseUrl = 'https://imgproxy.chanomhub.com';
+
+  /// Imgproxy options (e.g., resizing, formatting)
+  /// Using 'insecure/plain' for now as per plan.
+  static const String imgproxyOption = '/insecure/plain';
 
   /// API base URL
   static const String apiBaseUrl = 'https://api.chanomhub.com';

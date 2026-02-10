@@ -30,13 +30,16 @@ class ImageUrlHelper {
       return url;
     }
 
-    // Relative URL starting with /
+    // Construct the source URL (the original image location)
+    String sourceUrl;
     if (url.startsWith('/')) {
-      return '${AppConfig.cdnBaseUrl}${AppConfig.cdnOptimizationPath}$url';
+      sourceUrl = '${AppConfig.cdnBaseUrl}$url';
+    } else {
+      sourceUrl = '${AppConfig.cdnBaseUrl}/$url';
     }
 
-    // Relative URL without leading slash - add it
-    return '${AppConfig.cdnBaseUrl}${AppConfig.cdnOptimizationPath}/$url';
+    // Construct the imgproxy URL
+    return '${AppConfig.imgproxyBaseUrl}${AppConfig.imgproxyOption}/$sourceUrl';
   }
 
   /// Resolves multiple image URLs.

@@ -26,7 +26,7 @@ void main() {
       const path = '/image.jpg';
       expect(
         ImageUrlHelper.resolve(path), 
-        equals('${AppConfig.cdnBaseUrl}${AppConfig.cdnOptimizationPath}$path')
+        equals('${AppConfig.imgproxyBaseUrl}${AppConfig.imgproxyOption}/${AppConfig.cdnBaseUrl}$path')
       );
     });
 
@@ -34,7 +34,7 @@ void main() {
       const filename = 'image.jpg';
       expect(
         ImageUrlHelper.resolve(filename), 
-        equals('${AppConfig.cdnBaseUrl}${AppConfig.cdnOptimizationPath}/$filename')
+        equals('${AppConfig.imgproxyBaseUrl}${AppConfig.imgproxyOption}/${AppConfig.cdnBaseUrl}/$filename')
       );
     });
 
@@ -53,8 +53,8 @@ void main() {
       ];
       final expected = [
         'https://example.com/1.jpg',
-        '${AppConfig.cdnBaseUrl}${AppConfig.cdnOptimizationPath}/2.jpg',
-        '${AppConfig.cdnBaseUrl}${AppConfig.cdnOptimizationPath}/3.jpg',
+        '${AppConfig.imgproxyBaseUrl}${AppConfig.imgproxyOption}/${AppConfig.cdnBaseUrl}/2.jpg',
+        '${AppConfig.imgproxyBaseUrl}${AppConfig.imgproxyOption}/${AppConfig.cdnBaseUrl}/3.jpg',
       ];
       expect(ImageUrlHelper.resolveAll(inputs), equals(expected));
     });
@@ -67,7 +67,7 @@ void main() {
       ];
       expect(
         ImageUrlHelper.getFirstValid(inputs), 
-        equals('${AppConfig.cdnBaseUrl}${AppConfig.cdnOptimizationPath}/3.jpg')
+        equals('${AppConfig.imgproxyBaseUrl}${AppConfig.imgproxyOption}/${AppConfig.cdnBaseUrl}/3.jpg')
       );
     });
   });
