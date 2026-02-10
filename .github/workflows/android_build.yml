@@ -76,7 +76,7 @@ jobs:
         run: flutter build apk --release
         env:
           STORE_FILE: ${{ steps.android_keystore.outputs.filePath }}
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
@@ -85,7 +85,7 @@ jobs:
         run: flutter build appbundle --release
         env:
           STORE_FILE: ${{ steps.android_keystore.outputs.filePath }}
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
