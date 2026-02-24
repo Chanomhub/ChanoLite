@@ -147,6 +147,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     final authManager = AuthManager()..load();
+    ApiClient.onUnauthorized = authManager.refreshSession;
     return MultiProvider(
       providers: [
         Provider<CacheService>(create: (_) => CacheService()),

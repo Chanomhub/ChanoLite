@@ -34,6 +34,15 @@ abstract class UserApiService extends ChopperService {
   @Post(path: '/users/login-supabase')
   Future<Response> loginWithSSO(@Body() Map<String, dynamic> body);
 
+  @Post(path: '/auth/refresh')
+  Future<Response> refreshToken(@Body() Map<String, dynamic> body);
+
+  @Post(path: '/auth/logout')
+  Future<Response> logout();
+
+  @Post(path: '/auth/logout-all')
+  Future<Response> logoutAll();
+
   // Profile
 
   @Get(path: '/profiles/{username}')

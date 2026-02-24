@@ -80,6 +80,28 @@ final class _$UserApiService extends UserApiService {
   }
 
   @override
+  Future<Response<dynamic>> refreshToken(Map<String, dynamic> body) {
+    final Uri $url = Uri.parse('/auth/refresh');
+    final $body = body;
+    final Request $request = Request('POST', $url, client.baseUrl, body: $body);
+    return client.send<dynamic, dynamic>($request);
+  }
+
+  @override
+  Future<Response<dynamic>> logout() {
+    final Uri $url = Uri.parse('/auth/logout');
+    final Request $request = Request('POST', $url, client.baseUrl);
+    return client.send<dynamic, dynamic>($request);
+  }
+
+  @override
+  Future<Response<dynamic>> logoutAll() {
+    final Uri $url = Uri.parse('/auth/logout-all');
+    final Request $request = Request('POST', $url, client.baseUrl);
+    return client.send<dynamic, dynamic>($request);
+  }
+
+  @override
   Future<Response<dynamic>> getProfileByUsername(String username) {
     final Uri $url = Uri.parse('/profiles/${username}');
     final Request $request = Request('GET', $url, client.baseUrl);

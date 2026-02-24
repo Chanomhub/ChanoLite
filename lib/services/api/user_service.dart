@@ -16,6 +16,7 @@ class UserService {
       interceptors: [
         _AuthInterceptor(),
       ],
+      authenticator: _AuthAuthenticator(),
       converter: const JsonConverter(),
     );
     _apiService = _client.getService<UserApiService>();
@@ -108,6 +109,35 @@ class UserService {
     return User.fromJson(responseBody['user']);
   }
 
+  Future<User> refreshToken(String refreshToken) async {
+    final response = await _apiService.refreshToken({
+      'refreshToken': refreshToken,
+    });
+    _checkResponse(response);
+    final responseBody = response.body as Map<String, dynamic>;
+
+    if (responseBody['data'] != null) {
+      final data = responseBody['data'];
+      final userMap = data['user'];
+      return User.fromJson(userMap).copyWith(
+        refreshToken: data['refreshToken'],
+        expiresIn: data['expiresIn'],
+      );
+    }
+
+    return User.fromJson(responseBody['user']);
+  }
+
+  Future<void> logout() async {
+    final response = await _apiService.logout();
+    _checkResponse(response);
+  }
+
+  Future<void> logoutAll() async {
+    final response = await _apiService.logoutAll();
+    _checkResponse(response);
+  }
+
   // Profile
 
   Future<Profile> getProfileByUsername(String username) async {
@@ -136,6 +166,28 @@ class UserService {
       print('Request failed: Status=${response.statusCode} Error=${response.error} Body=${response.body}');
       throw Exception('Request failed: ${response.statusCode} ${response.error} body: ${response.body}');
     }
+  }
+}
+
+class _AuthAuthenticator extends Authenticator {
+  @override
+  FutureOr<Request?> authenticate(
+      Request request, Response response, [Request? originalRequest]) async {
+    if (response.statusCode == 401 && ApiClient.onUnauthorized != null) {
+      try {
+        await ApiClient.onUnauthorized!();
+        final newToken = ApiClient.authToken;
+        if (newToken != null) {
+          return request.copyWith(headers: {
+            ...request.headers,
+            'Authorization': 'Bearer $newToken',
+          });
+        }
+      } catch (e) {
+        print('Chopper authentication failed: $e');
+      }
+    }
+    return null;
   }
 }
 

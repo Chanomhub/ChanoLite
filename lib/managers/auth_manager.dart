@@ -61,6 +61,7 @@ class AuthManager extends ChangeNotifier {
     }
 
     ApiClient.updateAuthToken(_active?.token);
+    ApiClient.updateRefreshToken(_active?.refreshToken);
 
     _loading = false;
     notifyListeners();
@@ -147,6 +148,14 @@ class AuthManager extends ChangeNotifier {
   }
 
   Future<void> removeAccount(User user) async {
+    try {
+      if (_active != null) {
+        await _userService.logout();
+      }
+    } catch (e) {
+      print('Failed to logout from backend: $e');
+    }
+
     _accounts.removeWhere((u) => u.username == user.username);
     if (_active?.username == user.username) {
       _active = _accounts.isEmpty ? null : _accounts.first;
@@ -154,15 +163,25 @@ class AuthManager extends ChangeNotifier {
     }
     await _persistAccounts();
     ApiClient.updateAuthToken(_active?.token);
+    ApiClient.updateRefreshToken(_active?.refreshToken);
     notifyListeners();
   }
 
   Future<void> signOutAll() async {
+    try {
+      if (_active != null) {
+        await _userService.logoutAll();
+      }
+    } catch (e) {
+      print('Failed to logout-all from backend: $e');
+    }
+
     _accounts.clear();
     _active = null;
     await _persistAccounts();
     await _persistActive();
     ApiClient.updateAuthToken(null);
+    ApiClient.updateRefreshToken(null);
     notifyListeners();
   }
 
@@ -186,9 +205,35 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshSession() async {
+    final active = _active;
+    final refresh = active?.refreshToken;
+    if (active == null || refresh == null || refresh.isEmpty) {
+      return;
+    }
+
+    _loading = true;
+    notifyListeners();
+
+    try {
+      final fresh = await _userService.refreshToken(refresh);
+      await _addOrUpdateAccount(fresh);
+      await _setActive(fresh);
+    } catch (e) {
+      print('Failed to refresh session: $e');
+      // If refresh fails, we might want to sign out or just let it be
+      // For now, just rethrow or handle as needed
+      rethrow;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> _setActive(User user) async {
     _active = user;
     ApiClient.updateAuthToken(user.token);
+    ApiClient.updateRefreshToken(user.refreshToken);
     await _persistActive();
   }
 
