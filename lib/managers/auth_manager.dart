@@ -4,17 +4,19 @@ import 'package:chanolite/models/user_model.dart';
 import 'package:chanolite/services/api/api_client.dart';
 import 'package:chanolite/services/api/user_service.dart';
 import 'package:chanolite/services/supabase_auth_service.dart';
+import 'package:chanomhub_flutter/chanomhub_flutter.dart' hide User, Profile, Download, Article, Author;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthManager extends ChangeNotifier {
-  AuthManager({UserService? userService})
-      : _userService = userService ?? UserService();
+  AuthManager({UserService? userService, required this.sdk})
+      : _userService = userService ?? UserService(sdk: sdk);
 
   static const String _accountsKey = 'auth_accounts';
   static const String _activeKey = 'auth_active_account';
 
   final UserService _userService;
+  final ChanomhubClient sdk;
   final List<User> _accounts = [];
 
   bool _loading = false;
@@ -62,6 +64,10 @@ class AuthManager extends ChangeNotifier {
 
     ApiClient.updateAuthToken(_active?.token);
     ApiClient.updateRefreshToken(_active?.refreshToken);
+
+    if (_active != null) {
+      sdk.dio.options.headers['Authorization'] = 'Bearer ${_active?.token}';
+    }
 
     _loading = false;
     notifyListeners();
@@ -182,6 +188,7 @@ class AuthManager extends ChangeNotifier {
     await _persistActive();
     ApiClient.updateAuthToken(null);
     ApiClient.updateRefreshToken(null);
+    sdk.dio.options.headers.remove('Authorization');
     notifyListeners();
   }
 
@@ -234,6 +241,10 @@ class AuthManager extends ChangeNotifier {
     _active = user;
     ApiClient.updateAuthToken(user.token);
     ApiClient.updateRefreshToken(user.refreshToken);
+    
+    // Update SDK token
+    sdk.dio.options.headers['Authorization'] = 'Bearer ${user.token}';
+    
     await _persistActive();
   }
 

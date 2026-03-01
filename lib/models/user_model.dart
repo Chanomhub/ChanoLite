@@ -29,18 +29,25 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    int parsePoints(dynamic value) {
+      if (value == null) return 0;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
     return User(
-      roles: List<String>.from(json['roles']),
-      email: json['email'],
-      username: json['username'],
-      bio: json['bio'],
-      image: json['image'],
-      backgroundImage: json['backgroundImage'],
-      points: json['points'],
-      shrtflyApiKey: json['shrtflyApiKey'],
-      token: json['token'],
-      refreshToken: json['refreshToken'],
-      expiresIn: json['expiresIn'],
+      roles: List<String>.from(json['roles'] ?? []),
+      email: json['email']?.toString() ?? '',
+      username: json['username']?.toString() ?? '',
+      bio: json['bio']?.toString(),
+      image: json['image']?.toString(),
+      backgroundImage: json['backgroundImage']?.toString(),
+      points: parsePoints(json['points']),
+      shrtflyApiKey: json['shrtflyApiKey']?.toString(),
+      token: json['token']?.toString() ?? '',
+      refreshToken: json['refreshToken']?.toString(),
+      expiresIn: json['expiresIn'] is num ? (json['expiresIn'] as num).toInt() : int.tryParse(json['expiresIn']?.toString() ?? ''),
       socialMediaLinks: (json['socialMediaLinks'] as List? ?? [])
           .map((e) => SocialMediaLink.fromJson(e))
           .toList(),

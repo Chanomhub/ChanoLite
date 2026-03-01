@@ -100,19 +100,33 @@ class Article {
         downloads = [];
 
   factory Article.fromJson(Map<String, dynamic> json) {
+    int parseId(dynamic id) {
+      if (id == null) return 0;
+      if (id is num) return id.toInt();
+      if (id is String) return int.tryParse(id) ?? 0;
+      return 0;
+    }
+
+    int? parseInt(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value);
+      return null;
+    }
+
     return Article(
-      id: (json['id'] is String) ? int.parse(json['id']) : json['id'],
-      title: json['title'],
-      slug: json['slug'],
-      description: json['description'],
-      body: json['body'] ?? '',
+      id: parseId(json['id']),
+      title: json['title']?.toString() ?? '',
+      slug: json['slug']?.toString(),
+      description: json['description']?.toString() ?? '',
+      body: json['body']?.toString() ?? '',
       ver: json['ver'],
-      version: json['version'],
+      version: parseInt(json['version']),
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
-      updatedAt: DateTime.parse(json['updatedAt']),
-      status: json['status'],
-      engine: json['engine']?['name'] as String?,
-      mainImage: ImageUrlHelper.resolve(json['mainImage']),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : DateTime.now(),
+      status: json['status']?.toString(),
+      engine: json['engine'] is Map ? json['engine']['name']?.toString() : json['engine']?.toString(),
+      mainImage: ImageUrlHelper.resolve(json['mainImage']?.toString()),
       images: (() {
         final dynamic imagesData = json['images'];
         if (imagesData == null) {
@@ -121,34 +135,35 @@ class Article {
           return imagesData.map<String>((e) {
             String? url;
             if (e is Map && e.containsKey('url')) {
-              url = e['url'] as String?;
+              url = e['url']?.toString();
             } else if (e is String) {
               url = e;
+            } else if (e is Map && e.containsKey('path')) {
+              url = e['path']?.toString();
             }
             return ImageUrlHelper.resolve(url) ?? '';
           }).where((element) => element.isNotEmpty).toList();
-        } else if (imagesData is Map && imagesData.containsKey('url')) {
-          final url = ImageUrlHelper.resolve(imagesData['url'] as String?);
-          return url != null ? [url] : <String>[];
         }
         return <String>[]; 
       })(),
-      backgroundImage: ImageUrlHelper.resolve(json['backgroundImage']),
-      coverImage: ImageUrlHelper.resolve(json['coverImage']),
-      tagList: (json['tags'] != null)
-          ? (json['tags'] as List).map((e) => e['name'] as String).toList()
-          : List<String>.from(json['tagList'] ?? []),
-      categoryList: (json['categories'] != null)
-          ? (json['categories'] as List).map((e) => e['name'] as String).toList()
-          : List<String>.from(json['categoryList'] ?? []),
-      platformList: (json['platforms'] != null)
-          ? (json['platforms'] as List).map((e) => e['name'] as String).toList()
-          : List<String>.from(json['platformList'] ?? []),
+      backgroundImage: ImageUrlHelper.resolve(json['backgroundImage']?.toString()),
+      coverImage: ImageUrlHelper.resolve(json['coverImage']?.toString()),
+      tagList: (json['tags'] is List)
+          ? (json['tags'] as List).map((e) => e is Map ? e['name']?.toString() ?? '' : e.toString()).toList()
+          : [],
+      categoryList: (json['categories'] is List)
+          ? (json['categories'] as List).map((e) => e is Map ? e['name']?.toString() ?? '' : e.toString()).toList()
+          : [],
+      platformList: (json['platforms'] is List)
+          ? (json['platforms'] as List).map((e) => e is Map ? e['name']?.toString() ?? '' : e.toString()).toList()
+          : [],
       author: json['author'] != null ? Author.fromJson(json['author']) : null,
-      favorited: json['favorited'] ?? false,
-      favoritesCount: json['favoritesCount'] ?? 0,
-      sequentialCode: json['sequentialCode'],
-      downloads: (json['downloads'] as List? ?? []).map((e) => Download.fromJson(e)).toList(),
+      favorited: json['favorited'] == true,
+      favoritesCount: parseInt(json['favoritesCount']) ?? 0,
+      sequentialCode: json['sequentialCode']?.toString(),
+      downloads: (json['downloads'] is List) 
+          ? (json['downloads'] as List).map((e) => Download.fromJson(e)).toList() 
+          : [],
     );
   }
 

@@ -1,15 +1,17 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:chanolite/models/user_model.dart';
 import 'package:chopper/chopper.dart';
 import 'package:chanolite/services/api/api_client.dart';
+import 'package:chanomhub_flutter/chanomhub_flutter.dart' hide User, Profile, Author;
+import 'package:chanomhub_flutter/chanomhub_flutter.dart' as sdk_models;
 import 'user_api_service.dart';
 
 class UserService {
   late final ChopperClient _client;
   late final UserApiService _apiService;
+  final ChanomhubClient? sdk;
 
-  UserService() {
+  UserService({this.sdk}) {
     _client = ChopperClient(
       baseUrl: Uri.parse(ApiClient.baseUrl),
       services: [UserApiService.create()],
@@ -28,39 +30,42 @@ class UserService {
 
   // User and Authentication
 
+  // User and Authentication
+
   Future<User> getCurrentUser() async {
+    // SDK 1.0.1 doesn't have getMe, fallback to chopper service
     final response = await _apiService.getCurrentUser();
     _checkResponse(response);
     final data = response.body as Map<String, dynamic>;
     return User.fromJson(data['user']);
   }
 
-  Future<User> updateCurrentUser(Map<String, dynamic> user) async {
-    final response = await _apiService.updateCurrentUser({'user': user});
-    _checkResponse(response);
-    final data = response.body as Map<String, dynamic>;
-    return User.fromJson(data['user']);
-  }
-
-  Future<String> createPermanentToken(String duration, List<String> roles) async {
-    final response = await _apiService.createPermanentToken({'duration': duration, 'roles': roles});
-    _checkResponse(response);
-    final data = response.body as Map<String, dynamic>;
-    return data['token'];
-  }
-
-  Future<List<dynamic>> listTokens() async {
-    final response = await _apiService.listTokens();
-    _checkResponse(response);
-    return response.body as List<dynamic>;
-  }
-
-  Future<void> revokeToken(String id) async {
-    final response = await _apiService.revokeToken(id);
-    _checkResponse(response);
+  User _mapSdkUserToLocalUser(sdk_models.UserDTO user, {String? refreshToken, int? expiresIn}) {
+    return User(
+      roles: user.roles,
+      email: user.email,
+      username: user.username,
+      bio: user.bio,
+      image: user.image,
+      backgroundImage: user.backgroundImage,
+      points: user.points?.toInt() ?? 0,
+      shrtflyApiKey: null, // SDK doesn't expose this yet
+      token: user.token ?? '',
+      refreshToken: refreshToken,
+      expiresIn: expiresIn,
+      socialMediaLinks: [], // Map if SDK provides it later
+    );
   }
 
   Future<User> registerUser(String email, String username, String password) async {
+    if (sdk != null) {
+      final response = await sdk!.auth.register(
+        email: email,
+        username: username,
+        password: password,
+      );
+      return _mapSdkUserToLocalUser(response.user, refreshToken: response.refreshToken, expiresIn: response.expiresIn);
+    }
     final response = await _apiService.registerUser({
       'user': {'email': email, 'username': username, 'password': password}
     });
@@ -70,6 +75,13 @@ class UserService {
   }
 
   Future<User> login(String email, String password) async {
+    if (sdk != null) {
+      final response = await sdk!.auth.login(
+        email: email,
+        password: password,
+      );
+      return _mapSdkUserToLocalUser(response.user, refreshToken: response.refreshToken, expiresIn: response.expiresIn);
+    }
     final response = await _apiService.login({
       'user': {'email': email, 'password': password}
     });
@@ -85,7 +97,6 @@ class UserService {
       );
     }
     
-    // Fallback for old structure or unexpected format
     return User.fromJson(responseBody['user']);
   }
 
@@ -110,6 +121,22 @@ class UserService {
   }
 
   Future<User> refreshToken(String refreshToken) async {
+    if (sdk != null) {
+      final response = await sdk!.auth.refresh(refreshToken);
+      // SDK doesn't return user here, only tokens.
+      // We might need to fetch the user separately if needed, 
+      // but let's at least return what we have.
+      return User(
+        username: '', // Temporary placeholder
+        email: '',
+        token: response.accessToken,
+        refreshToken: response.refreshToken,
+        expiresIn: response.expiresIn,
+        points: 0,
+        roles: [],
+        socialMediaLinks: [],
+      );
+    }
     final response = await _apiService.refreshToken({
       'refreshToken': refreshToken,
     });
@@ -129,11 +156,22 @@ class UserService {
   }
 
   Future<void> logout() async {
+    if (sdk != null) {
+      final token = ApiClient.refreshToken;
+      if (token != null) {
+        await sdk!.auth.logout(token);
+      }
+      return;
+    }
     final response = await _apiService.logout();
     _checkResponse(response);
   }
 
   Future<void> logoutAll() async {
+    if (sdk != null) {
+      await sdk!.auth.logoutAll();
+      return;
+    }
     final response = await _apiService.logoutAll();
     _checkResponse(response);
   }

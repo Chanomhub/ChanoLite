@@ -27,8 +27,11 @@ import 'package:chanolite/services/local_notification_service.dart';
 import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/screens/article_detail_screen.dart';
 import 'package:chanolite/repositories/article_repository.dart';
+import 'package:chanomhub_flutter/chanomhub_flutter.dart';
+import 'package:chanolite/constants/app_config.dart';
 import 'package:chanolite/theme/locale_notifier.dart';
 import 'package:chanolite/l10n/generated/app_localizations.dart';
+import 'package:chanolite/services/api/sdk_interceptor.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -82,9 +85,18 @@ Future<void> main() async {
 
   final initialLocale = await LocaleNotifier.loadSavedLocale();
 
+  final sdk = ChanomhubClient(
+    baseUrl: AppConfig.apiBaseUrl,
+    cdnUrl: AppConfig.imgproxyBaseUrl,
+  );
+  
+  // Inject the type fix interceptor before SDK parsers
+  sdk.dio.interceptors.insert(0, SdkTypeFixInterceptor());
+
   runApp(MyApp(
     downloadManager: downloadManager,
     initialLocale: initialLocale,
+    sdk: sdk,
   ));
 }
 
@@ -106,10 +118,12 @@ class MyApp extends StatefulWidget {
     super.key,
     required this.downloadManager,
     required this.initialLocale,
+    required this.sdk,
   });
 
   final DownloadManager downloadManager;
   final Locale initialLocale;
+  final ChanomhubClient sdk;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -147,12 +161,13 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final authManager = AuthManager()..load();
+    final authManager = AuthManager(sdk: widget.sdk)..load();
     ApiClient.onUnauthorized = authManager.refreshSession;
     return MultiProvider(
       providers: [
+        Provider<ChanomhubClient>.value(value: widget.sdk),
         Provider<CacheService>(create: (_) => CacheService()),
-        Provider<ArticleRepository>(create: (_) => ArticleRepository()),
+        Provider<ArticleRepository>(create: (context) => ArticleRepository(sdk: context.read<ChanomhubClient>())),
         ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: authManager),
         ChangeNotifierProvider(create: (_) => ThemeNotifier(ThemeMode.dark)),
