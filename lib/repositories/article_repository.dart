@@ -2,9 +2,6 @@ import 'dart:ui';
 import 'package:chanolite/models/article_model.dart';
 import 'package:chanolite/models/download.dart';
 import 'package:chanolite/services/api/api_client.dart';
-import 'package:chanolite/models/article_model.dart';
-import 'package:chanolite/models/download.dart';
-import 'package:chanolite/services/api/api_client.dart';
 import 'package:chanomhub_flutter/chanomhub_flutter.dart' as sdk_models;
 import 'package:chanomhub_flutter/chanomhub_flutter.dart' hide Article, Download, User, Profile, Author;
 
@@ -15,6 +12,37 @@ class ArticleRepository {
   ArticleRepository({ApiClient? apiClient, required this.sdk})
       : _apiClient = apiClient ?? ApiClient();
 
+  /// Constants for GraphQL fields to avoid duplication and manual errors
+  static const String _articleBaseFields = '''
+    id
+    title
+    slug
+    description
+    ver
+    coverImage
+    mainImage
+    backgroundImage
+    favoritesCount
+    favorited
+    createdAt
+    updatedAt
+    status
+    sequentialCode
+    tags { id name }
+    categories { id name }
+    platforms { id name }
+    engine { id name }
+    author { id name image }
+  ''';
+
+  static const String _articleDetailFields = '''
+    $_articleBaseFields
+    body
+    images { id url }
+    downloads { id name url isActive vipOnly }
+  ''';
+
+  /// Fetch a list of articles with pagination and filtering
   Future<ArticlesResponse> getArticles({
     int limit = 20,
     int offset = 0,
@@ -25,117 +53,46 @@ class ArticleRepository {
     String? engine,
     String? status,
     String? sequentialCode,
-    String? returnFields,
   }) async {
-    // Use SDK for fetching articles
-    final response = await sdk.articles.getAllPaginated(
-      options: sdk_models.ArticleListOptions(
-        limit: limit,
-        offset: offset,
-        status: status ?? 'PUBLISHED',
-        filter: sdk_models.ArticleFilter(
-          q: query,
-          tag: tag,
-          category: category,
-          platform: platform,
-          engine: engine,
-          sequentialCode: sequentialCode,
-        ),
-      ),
-    );
-
-    return ArticlesResponse(
-      articles: response.items.map((item) => Article(
-        id: item.id,
-        title: item.title,
-        slug: item.slug,
-        description: item.description,
-        body: '',
-        ver: item.ver,
-        version: null,
-        createdAt: DateTime.tryParse(item.createdAt ?? ''),
-        updatedAt: DateTime.tryParse(item.updatedAt ?? '') ?? DateTime.now(),
-        status: item.status,
-        engine: item.engine?.name,
-        mainImage: item.mainImage,
-        images: item.images?.map((e) => e.url).toList() ?? [],
-        backgroundImage: null,
-        coverImage: item.coverImage,
-        tagList: item.tags?.map((e) => e.name).toList() ?? [],
-        categoryList: item.categories?.map((e) => e.name).toList() ?? [],
-        platformList: item.platforms?.map((e) => e.name).toList() ?? [],
-        author: Author(id: item.author.id?.toString(), name: item.author.name, image: item.author.image),
-        favorited: item.favorited ?? false,
-        favoritesCount: item.favoritesCount,
-        sequentialCode: item.sequentialCode,
-        downloads: [],
-      )).toList(),
-      articlesCount: response.total,
-    );
-  }
-
-  Future<Article> getArticleBySlug(String slug, {Locale? language, String? returnFields}) async {
-    final result = await sdk.articles.getBySlug(
-      slug,
-      options: sdk_models.ArticleQueryOptions(
-        language: language?.languageCode,
-      ),
-    );
-    if (result == null) throw Exception('Article not found');
-    return Article(
-        id: result.id,
-        title: result.title,
-        slug: result.slug,
-        description: result.description,
-        body: result.body,
-        ver: result.ver,
-        version: int.tryParse(result.version ?? ''),
-        createdAt: DateTime.tryParse(result.createdAt),
-        updatedAt: DateTime.tryParse(result.updatedAt) ?? DateTime.now(),
-        status: result.status,
-        engine: result.engine.name,
-        mainImage: result.mainImage,
-        images: result.images.map((e) => e.url).toList(),
-        backgroundImage: result.backgroundImage,
-        coverImage: result.coverImage,
-        tagList: result.tags.map((e) => e.name).toList(),
-        categoryList: result.categories.map((e) => e.name).toList(),
-        platformList: result.platforms.map((e) => e.name).toList(),
-        author: Author(id: result.author.id?.toString(), name: result.author.name, image: result.author.image),
-        favorited: result.favorited,
-        favoritesCount: result.favoritesCount,
-        sequentialCode: result.sequentialCode,
-        downloads: result.downloads?.map((e) => Download(id: e.id.toString(), name: e.name, url: e.url, isActive: e.isActive, vipOnly: e.vipOnly)).toList() ?? [],
-    );
-  }
-
-  Future<Article> getArticleById(int id, {Locale? language, String? returnFields}) async {
-    // SDK 1.0.1 doesn't have getById, fallback to manual query
-    const String defaultFields = '''
-      id
-      title
-      slug
-      description
-      body
-      coverImage
-      mainImage
-      backgroundImage
-      favoritesCount
-      createdAt
-      updatedAt
-      tags { name }
-      categories { name }
-      platforms { name }
-      author { name image }
-      downloads { name url }
+    final String graphqlQuery = '''
+      query GetArticles(\$limit: Int!, \$offset: Int!, \$status: ArticleStatus, \$filter: ArticleFilterInput) {
+        articles(limit: \$limit, offset: \$offset, status: \$status, filter: \$filter) {
+          $_articleBaseFields
+        }
+        articlesCount(status: \$status, filter: \$filter)
+      }
     ''';
 
-    final String fields = returnFields ?? defaultFields;
+    final Map<String, dynamic> filter = {
+      if (query != null) 'q': query,
+      if (tag != null) 'tag': tag,
+      if (category != null) 'category': category,
+      if (platform != null) 'platform': platform,
+      if (engine != null) 'engine': engine,
+      if (sequentialCode != null) 'sequentialCode': sequentialCode,
+    };
+
+    final data = await _apiClient.query(graphqlQuery, variables: {
+      'limit': limit,
+      'offset': offset,
+      'status': status ?? 'PUBLISHED',
+      'filter': filter.isEmpty ? null : filter,
+    });
+
+    final List? items = data['data']?['articles'];
+    if (items == null) return ArticlesResponse(articles: [], articlesCount: 0);
+
+    return ArticlesResponse(
+      articles: items.map((json) => Article.fromJson(json)).toList(),
+      articlesCount: data['data']?['articlesCount'] ?? items.length,
+    );
+  }
+
+  /// Fetch a single article by ID, including all details and downloads
+  Future<Article> getArticleById(int id, {Locale? language}) async {
     final String graphqlQuery = '''
-      query GetArticle(\$id: Int, \$language: String) {
-        public {
-          article(id: \$id, language: \$language) { $fields }
-        }
+      query GetArticleById(\$id: Int!, \$language: String) {
+        article(id: \$id, language: \$language) { $_articleDetailFields }
       }
     ''';
 
@@ -144,22 +101,44 @@ class ArticleRepository {
       'language': language?.languageCode,
     });
 
-    if (data['data'] != null && data['data']['public'] != null && data['data']['public']['article'] != null) {
-      return Article.fromJson(data['data']['public']['article']);
-    } else {
-      throw Exception('Failed to load article by ID');
-    }
+    final articleData = data['data']?['article'];
+    if (articleData == null) throw Exception('Article not found');
+
+    return Article.fromJson(articleData);
   }
 
+  /// Fetch a single article by Slug
+  Future<Article> getArticleBySlug(String slug, {Locale? language}) async {
+    final String graphqlQuery = '''
+      query GetArticleBySlug(\$slug: String!, \$language: String) {
+        article(slug: \$slug, language: \$language) { $_articleDetailFields }
+      }
+    ''';
+
+    final data = await _apiClient.query(graphqlQuery, variables: {
+      'slug': slug,
+      'language': language?.languageCode,
+    });
+
+    final articleData = data['data']?['article'];
+    if (articleData == null) throw Exception('Article not found');
+
+    return Article.fromJson(articleData);
+  }
+
+  /// Legacy helper for separate downloads fetch if needed
   Future<List<Download>> getDownloads(int articleId) async {
-    final result = await sdk.downloads.getByArticle(articleId);
-    return result.map((e) => Download(
-      id: e.id.toString(),
-      name: e.name ?? 'Official Download',
-      url: e.url,
-      isActive: e.isActive,
-      vipOnly: e.vipOnly,
-    )).toList();
+    final String graphqlQuery = '''
+      query GetDownloads(\$articleId: Int!) {
+        downloads(articleId: \$articleId) { id name url isActive vipOnly }
+      }
+    ''';
+
+    final data = await _apiClient.query(graphqlQuery, variables: {
+      'articleId': articleId,
+    });
+
+    final List downloadsData = data['data']?['downloads'] ?? [];
+    return downloadsData.map((e) => Download.fromJson(e)).toList();
   }
 }
-

@@ -18,10 +18,7 @@ rootProject.layout.buildDirectory.value(newBuildDir)
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
-}
-subprojects {
-    project.evaluationDependsOn(":app")
-    
+
     afterEvaluate {
         // Force Java 17 for all Android plugins
         extensions.findByType<com.android.build.gradle.BaseExtension>()?.apply {
@@ -41,6 +38,12 @@ subprojects {
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
             kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
         }
+    }
+}
+
+subprojects {
+    if (project.name != "app") {
+        project.evaluationDependsOn(":app")
     }
 }
 

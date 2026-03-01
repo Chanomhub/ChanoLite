@@ -34,47 +34,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   String? _error;
   String? _lastLanguageCode;
 
- // Removed downloads from here, but wait, I need to remove it from the string literal below.
-
-  // Actually, I will replace the whole string to be safe.
-  static const String _detailArticleFields = r'''
-    id
-    slug
-    sequentialCode
-    title
-    description
-    body
-    status
-    ver
-    coverImage
-    backgroundImage
-    images {
-      url
-    }
-    author {
-      name
-      image
-    }
-    creators {
-      name
-    }
-    categories {
-      name
-    }
-    tags {
-      name
-    }
-    platforms {
-      name
-    }
-    engine {
-      name
-    }
-    favoritesCount
-    createdAt
-    updatedAt
-  ''';
-
   @override
   void initState() {
     super.initState();
@@ -115,13 +74,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     }
 
     try {
-      Article fetchedArticle;
-      fetchedArticle = await service.getArticleById(widget.articleId, language: language, returnFields: _detailArticleFields);
-
-      // Fetch downloads separately
-      final downloads = await service.getDownloads(widget.articleId);
-      
-      fetchedArticle = fetchedArticle.copyWith(downloads: downloads);
+      final fetchedArticle = await service.getArticleById(widget.articleId, language: language);
 
       if (mounted) {
         setState(() {

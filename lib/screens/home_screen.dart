@@ -66,24 +66,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  static const String _homeArticleFields = r'''
-    id
-    title
-    description
-    slug
-    coverImage
-    mainImage
-    backgroundImage
-    favoritesCount
-    updatedAt
-    tags {
-      name
-    }
-    platforms {
-      name
-    }
-  ''';
-
   Future<void> _fetchAndApplyArticles({
     required int limit,
     String? status,
@@ -91,7 +73,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final response = await _articleRepository.getArticles(
       limit: limit,
       status: status,
-      returnFields: _homeArticleFields,
     );
 
     if (!mounted) return;
