@@ -21,6 +21,27 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+    
+    afterEvaluate {
+        // Force Java 17 for all Android plugins
+        extensions.findByType<com.android.build.gradle.BaseExtension>()?.apply {
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+        }
+
+        // Force Java 17 for all JavaCompile tasks
+        tasks.withType<JavaCompile>().configureEach {
+            sourceCompatibility = JavaVersion.VERSION_17.toString()
+            targetCompatibility = JavaVersion.VERSION_17.toString()
+        }
+
+        // Force Java 17 for all KotlinCompile tasks
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {

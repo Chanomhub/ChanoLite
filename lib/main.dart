@@ -11,6 +11,7 @@ import 'package:chanolite/screens/game_library_screen.dart';
 import 'package:chanolite/screens/home_screen.dart';
 
 import 'package:chanolite/managers/auth_manager.dart';
+import 'package:chanolite/services/api/api_client.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/screens/search_screen.dart';
