@@ -25,6 +25,7 @@ import 'package:provider/provider.dart';
 import 'package:chanolite/services/notification_service.dart';
 import 'package:chanolite/services/local_notification_service.dart';
 import 'package:chanolite/services/cache_service.dart';
+import 'package:chanolite/services/game_tools_service.dart';
 import 'package:chanolite/screens/article_detail_screen.dart';
 import 'package:chanolite/repositories/article_repository.dart';
 import 'package:chanomhub_flutter/chanomhub_flutter.dart';
@@ -82,6 +83,19 @@ Future<void> main() async {
 
   final downloadManager = DownloadManager();
   await downloadManager.loadTasks();
+
+  // Listen for proton installation downloads
+  downloadManager.onDownloadComplete((task) async {
+    if (task.engine == 'proton-install' && task.filePath != null) {
+      print('Main: Auto-installing Proton from ${task.filePath}');
+      final success = await GameToolsService.installProton(task.filePath!);
+      if (success) {
+        print('Main: Proton auto-installation successful!');
+      } else {
+        print('Main: Proton auto-installation failed.');
+      }
+    }
+  });
 
   final initialLocale = await LocaleNotifier.loadSavedLocale();
 

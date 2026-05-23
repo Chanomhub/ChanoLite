@@ -209,6 +209,27 @@ class GameToolsData {
         ),
       ],
     ),
+
+    // Proton-CE (Manual Command for Android/Linux environments)
+    GameTool(
+      id: 'proton-ce',
+      name: 'Proton-CE',
+      description: 'Run games using Steam Proton command with custom environment (Linux/Termux environment on Android)',
+      packageName: 'proton.manual', 
+      supportedEngines: ['Windows', 'PC', 'Win32', 'x64', 'x86', 'exe'],
+      downloadSources: [
+        ToolDownloadSource(
+          name: 'Proton-GE (Direct Download)',
+          url: 'https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton9-25/GE-Proton9-25.tar.gz',
+          type: SourceType.github,
+        ),
+        ToolDownloadSource(
+          name: 'Proton-GE (GitHub Releases)',
+          url: 'https://github.com/GloriousEggroll/proton-ge-custom/releases',
+          type: SourceType.github,
+        ),
+      ],
+    ),
   ];
 
   /// Get all main tools (not plugins)

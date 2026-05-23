@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants/game_tools_data.dart';
 import '../models/game_tool.dart';
 import '../services/game_tools_service.dart';
+import 'package:provider/provider.dart';
+import '../managers/download_manager.dart';
 
 class ToolsScreen extends StatefulWidget {
   const ToolsScreen({super.key});
@@ -284,6 +286,18 @@ class _ToolsScreenState extends State<ToolsScreen> {
   }
 
   Future<void> _openDownloadSource(ToolDownloadSource source) async {
+    // Intercept Proton-CE Direct Download to use our internal Downloader
+    if (source.name.contains('Proton-GE (Direct Download)')) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Starting Proton download...')),
+        );
+      }
+      final downloadManager = Provider.of<DownloadManager>(context, listen: false);
+      GameToolsService.startProtonDownload(downloadManager);
+      return;
+    }
+
     final uri = Uri.tryParse(source.url);
     if (uri == null) return;
 

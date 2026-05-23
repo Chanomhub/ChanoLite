@@ -16,8 +16,11 @@ import 'package:flutter/services.dart';
 @pragma('vm:entry-point')
 class DownloadManager extends ChangeNotifier {
   final List<DownloadTask> _tasks = [];
+  final List<Function(DownloadTask)> _onDownloadCompleteCallbacks = [];
 
-
+  void onDownloadComplete(Function(DownloadTask) callback) {
+    _onDownloadCompleteCallbacks.add(callback);
+  }
 
   static const String downloadPathKey = 'download_path';
   static const String metadataKey = 'download_metadata';
@@ -387,6 +390,16 @@ class DownloadManager extends ChangeNotifier {
       fileName: actualFileName,
     );
     notifyListeners();
+
+    if (status == DownloadTaskStatus.complete) {
+      for (final callback in _onDownloadCompleteCallbacks) {
+        try {
+          callback(_tasks[index]);
+        } catch (e) {
+          print('DownloadManager: Error in complete callback: $e');
+        }
+      }
+    }
   }
 
   void _updateTask(
