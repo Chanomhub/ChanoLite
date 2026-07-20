@@ -39,7 +39,7 @@ class ArticleRepository {
     $_articleBaseFields
     body
     images { id url }
-    downloads { id name url isActive vipOnly }
+    downloads { id name url isActive }
   ''';
 
   /// Fetch a list of articles with pagination and filtering
@@ -56,10 +56,12 @@ class ArticleRepository {
   }) async {
     final String graphqlQuery = '''
       query GetArticles(\$limit: Int!, \$offset: Int!, \$status: ArticleStatus, \$filter: ArticleFilterInput) {
-        articles(limit: \$limit, offset: \$offset, status: \$status, filter: \$filter) {
-          $_articleBaseFields
+        public {
+          articles(limit: \$limit, offset: \$offset, status: \$status, filter: \$filter) {
+            $_articleBaseFields
+          }
+          articlesCount(status: \$status, filter: \$filter)
         }
-        articlesCount(status: \$status, filter: \$filter)
       }
     ''';
 
@@ -79,12 +81,12 @@ class ArticleRepository {
       'filter': filter.isEmpty ? null : filter,
     });
 
-    final List? items = data['data']?['articles'];
+    final List? items = data['data']?['public']?['articles'];
     if (items == null) return ArticlesResponse(articles: [], articlesCount: 0);
 
     return ArticlesResponse(
       articles: items.map((json) => Article.fromJson(json)).toList(),
-      articlesCount: data['data']?['articlesCount'] ?? items.length,
+      articlesCount: data['data']?['public']?['articlesCount'] ?? items.length,
     );
   }
 
@@ -92,7 +94,9 @@ class ArticleRepository {
   Future<Article> getArticleById(int id, {Locale? language}) async {
     final String graphqlQuery = '''
       query GetArticleById(\$id: Int!, \$language: String) {
-        article(id: \$id, language: \$language) { $_articleDetailFields }
+        public {
+          article(id: \$id, language: \$language) { $_articleDetailFields }
+        }
       }
     ''';
 
@@ -101,7 +105,7 @@ class ArticleRepository {
       'language': language?.languageCode,
     });
 
-    final articleData = data['data']?['article'];
+    final articleData = data['data']?['public']?['article'];
     if (articleData == null) throw Exception('Article not found');
 
     return Article.fromJson(articleData);
@@ -111,7 +115,9 @@ class ArticleRepository {
   Future<Article> getArticleBySlug(String slug, {Locale? language}) async {
     final String graphqlQuery = '''
       query GetArticleBySlug(\$slug: String!, \$language: String) {
-        article(slug: \$slug, language: \$language) { $_articleDetailFields }
+        public {
+          article(slug: \$slug, language: \$language) { $_articleDetailFields }
+        }
       }
     ''';
 
@@ -120,7 +126,7 @@ class ArticleRepository {
       'language': language?.languageCode,
     });
 
-    final articleData = data['data']?['article'];
+    final articleData = data['data']?['public']?['article'];
     if (articleData == null) throw Exception('Article not found');
 
     return Article.fromJson(articleData);
@@ -130,7 +136,9 @@ class ArticleRepository {
   Future<List<Download>> getDownloads(int articleId) async {
     final String graphqlQuery = '''
       query GetDownloads(\$articleId: Int!) {
-        downloads(articleId: \$articleId) { id name url isActive vipOnly }
+        public {
+          downloads(articleId: \$articleId) { id name url isActive }
+        }
       }
     ''';
 
@@ -138,7 +146,7 @@ class ArticleRepository {
       'articleId': articleId,
     });
 
-    final List downloadsData = data['data']?['downloads'] ?? [];
+    final List downloadsData = data['data']?['public']?['downloads'] ?? [];
     return downloadsData.map((e) => Download.fromJson(e)).toList();
   }
 }

@@ -188,10 +188,9 @@ packages:
   chanomhub_flutter:
     dependency: "direct main"
     description:
-      name: chanomhub_flutter
-      sha256: "204632ed1cf90cf157c7284361eff6e40703cb013ce05909209a3b83ef0b2927"
-      url: "https://pub.dev"
-    source: hosted
+      path: "../sdks/flutter"
+      relative: true
+    source: path
     version: "1.0.3"
   characters:
     dependency: transitive

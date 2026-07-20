@@ -10,6 +10,10 @@ import 'package:chanolite/services/installed_apps_service.dart';
 import 'package:chanolite/services/game_tools_service.dart';
 import 'package:chanolite/widgets/tool_selection_dialog.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:archive/archive_io.dart';
+import 'package:chanolite/screens/rpg_maker_play_screen.dart';
+import 'package:chanolite/services/native_extractor_service.dart';
 import 'package:provider/provider.dart';
 
 class GameLibraryScreen extends StatefulWidget {
@@ -63,6 +67,8 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
     final hasEngine = task.engine != null && task.engine!.isNotEmpty;
     final downloadManager = Provider.of<DownloadManager>(context, listen: false);
     
+    print('DEBUG_CONTEXT_MENU: status=${task.status}, engine=${task.engine}, fileName=${task.fileName}, isApk=$isApk');
+    
     showModalBottomSheet(
       context: context,
       builder: (BuildContext bc) {
@@ -86,6 +92,22 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
                   if (task.filePath != null) {
                     FileOpenerService.openFile(task.filePath!);
                   }
+                },
+              ),
+            // Built-in RPG Maker Play Option
+            if (task.status == DownloadTaskStatus.complete && !isApk && 
+                (task.engine?.toLowerCase() == 'rpgm' || 
+                 task.engine?.toLowerCase() == 'rpg-maker' || 
+                 task.engine?.toLowerCase() == 'rpg maker' ||
+                 task.fileName?.toLowerCase().contains('rpgm') == true ||
+                 task.fileName?.toLowerCase().contains('rpgmaker') == true))
+              ListTile(
+                leading: const Icon(Icons.play_circle_fill, color: Colors.green),
+                title: const Text('Play Natively (Built-in Player)'),
+                subtitle: const Text('Direct launch RPG Maker MV/MZ'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _playRpgMakerNatively(context, task);
                 },
               ),
             // Play with Tool option (for games with engine info)
@@ -264,6 +286,198 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
     if (!success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to launch game with tool')),
+      );
+    }
+  }
+
+  Future<void> _playRpgMakerNatively(BuildContext context, DownloadTask task) async {
+    if (task.filePath == null) return;
+    
+    var file = File(task.filePath!);
+    if (!await file.exists()) {
+      final parentDir = file.parent;
+      if (await parentDir.exists()) {
+        // Try clean filename without the copy counters like (1), (2)
+        final cleanFileName = task.fileName?.replaceAll(RegExp(r'\s\(\d+\)'), '') ?? '';
+        final cleanFile = File('${parentDir.path}/$cleanFileName');
+        
+        if (cleanFileName.isNotEmpty && await cleanFile.exists()) {
+          file = cleanFile;
+          // Update in-memory path to the clean file
+          Provider.of<DownloadManager>(context, listen: false).updateTaskPath(task.url, cleanFile.path);
+        } else {
+          // Check if an extracted directory already exists
+          final baseName = cleanFileName.isEmpty
+              ? (task.fileName ?? '').replaceAll(RegExp(r'\s\(\d+\)'), '')
+              : cleanFileName;
+          final cleanDirName = baseName
+              .replaceAll('.zip', '')
+              .replaceAll('.7z', '')
+              .replaceAll('.rar', '');
+          final potentialDir = Directory('${parentDir.path}/$cleanDirName');
+          
+          if (cleanDirName.isNotEmpty && await potentialDir.exists()) {
+            Provider.of<DownloadManager>(context, listen: false).updateTaskPath(task.url, potentialDir.path);
+            if (context.mounted) {
+              final updatedTask = Provider.of<DownloadManager>(context, listen: false)
+                  .tasks.firstWhere((t) => t.url == task.url);
+              _playRpgMakerNatively(context, updatedTask);
+            }
+            return;
+          }
+          
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Game file not found')),
+            );
+          }
+          return;
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Game directory not found')),
+          );
+        }
+        return;
+      }
+    }
+    
+    final isZip = task.filePath!.toLowerCase().endsWith('.zip');
+    final is7z = task.filePath!.toLowerCase().endsWith('.7z');
+    final isRar = task.filePath!.toLowerCase().endsWith('.rar');
+    final isArchive = isZip || is7z || isRar;
+    
+    String gameDir = task.filePath!;
+    
+    if (isArchive) {
+      final cleanName = task.fileName
+          ?.replaceAll('.zip', '')
+          ?.replaceAll('.7z', '')
+          ?.replaceAll('.rar', '') ?? 'extracted_game';
+      
+      final parentDir = file.parent.path;
+      final potentialDir = Directory('${parentDir}/${cleanName}');
+      
+      if (await potentialDir.exists()) {
+        // Auto-detected extracted folder! Use it.
+        gameDir = potentialDir.path;
+        // Update task path in-memory so next time we launch directly
+        Provider.of<DownloadManager>(context, listen: false).updateTaskPath(task.url, gameDir);
+      } else {
+        // Need to extract archive first
+        final progressNotifier = ValueNotifier<Map<String, dynamic>>({
+          'progress': 0,
+          'file': '',
+        });
+
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Extracting Game Files'),
+              content: ValueListenableBuilder<Map<String, dynamic>>(
+                valueListenable: progressNotifier,
+                builder: (ctx, val, _) {
+                  final int progress = val['progress'] as int;
+                  final String fileName = val['file'] as String;
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LinearProgressIndicator(value: progress / 100),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Progress: $progress%',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        fileName.split('/').last,
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          );
+        }
+        
+        try {
+          final targetPath = '${parentDir}/${cleanName}';
+          final success = await NativeExtractorService.extractArchive(
+            task.filePath!,
+            targetPath,
+            onProgress: (progress, fileName) {
+              progressNotifier.value = {
+                'progress': progress,
+                'file': fileName,
+              };
+            },
+          );
+          
+          if (context.mounted) {
+            Navigator.of(context).pop(); // Close extracting dialog
+          }
+          
+          if (success) {
+            gameDir = targetPath;
+            // Update task filePath so we don't have to extract again next time!
+            Provider.of<DownloadManager>(context, listen: false).updateTaskPath(task.url, targetPath);
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Failed to extract archive natively')),
+              );
+            }
+            return;
+          }
+        } catch (e) {
+          if (context.mounted) {
+            Navigator.of(context).pop(); // Close extracting dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to extract archive: $e')),
+            );
+          }
+          return;
+        }
+      }
+    }
+    
+    // Scan the directory to find where index.html is located
+    String? indexHtmlPath;
+    final dir = Directory(gameDir);
+    if (await dir.exists()) {
+      final List<FileSystemEntity> entities = await dir.list(recursive: true).toList();
+      for (final entity in entities) {
+        if (entity is File && entity.path.toLowerCase().endsWith('index.html')) {
+          indexHtmlPath = entity.parent.path;
+          break;
+        }
+      }
+    }
+    
+    if (indexHtmlPath == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not find index.html. Is this an HTML5 RPG Maker game?')),
+        );
+      }
+      return;
+    }
+    
+    if (context.mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => RpgMakerPlayScreen(
+            gamePath: indexHtmlPath!,
+            gameTitle: task.title ?? task.fileName ?? 'RPG Maker Game',
+          ),
+        ),
       );
     }
   }
@@ -449,7 +663,7 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          task.fileName ?? task.url,
+                          task.title ?? task.fileName ?? task.url,
                           style: const TextStyle(fontWeight: FontWeight.bold),
                           maxLines: 2, // Allow for 2 lines
                           overflow: TextOverflow.ellipsis,

@@ -49,7 +49,7 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> query(String query, {Map<String, dynamic>? variables, bool isRetry = false}) async {
-    final uri = Uri.parse('$baseUrl/graphql');
+    final uri = Uri.parse('$baseUrl/v2/graphql');
     final body = {
       'query': query,
       'variables': variables,

@@ -46,7 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.clear();
       });
       await _maybePopOnSuccess();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      print('LOGIN_ERROR: $error');
+      print('LOGIN_ERROR_STACK: $stackTrace');
       if (!mounted) {
         return;
       }
@@ -179,6 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
               border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.emailAddress,
+            textCapitalization: TextCapitalization.none,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your email';

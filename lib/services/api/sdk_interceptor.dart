@@ -101,6 +101,13 @@ class SdkTypeFixInterceptor extends Interceptor {
   dynamic _fixRestData(dynamic data) {
      if (data is Map<String, dynamic>) {
         final fixed = Map<String, dynamic>.from(data);
+        
+        // Flatten "data" key wrapper if present (mismatch between legacy REST SDK and new GraphQL-style backend responses)
+        if (fixed.containsKey('data') && fixed['data'] is Map) {
+          final innerData = Map<String, dynamic>.from(fixed['data']);
+          fixed.addAll(innerData);
+        }
+        
         if (fixed.containsKey('user') && fixed['user'] is Map) {
            final userFixed = Map<String, dynamic>.from(fixed['user']);
            if (userFixed['points'] is String) {

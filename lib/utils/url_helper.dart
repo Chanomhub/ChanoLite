@@ -256,3 +256,13 @@ class InAppBrowserHelper extends InAppBrowser {
     return null;
   }
 }
+
+/// Resolves relative download paths (e.g. starting with "public/") 
+/// to the absolute storage download CDN URL.
+String resolveDownloadUrl(String url) {
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  final cleanUrl = url.startsWith('/') ? url.substring(1) : url;
+  return 'https://storage.chanomhub.com/$cleanUrl';
+}

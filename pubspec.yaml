@@ -68,7 +68,9 @@ dependencies:
   supabase_flutter: ^2.10.0
   flutter_dotenv: ^5.2.1
   chopper: ^8.4.0
-  chanomhub_flutter: ^1.0.3
+  chanomhub_flutter:
+    path: ../sdks/flutter
+
 
 
 dev_dependencies:

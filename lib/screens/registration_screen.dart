@@ -98,6 +98,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         labelText: 'Username',
                         border: OutlineInputBorder(),
                       ),
+                      textCapitalization: TextCapitalization.none,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your username';
@@ -113,6 +114,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.emailAddress,
+                      textCapitalization: TextCapitalization.none,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';

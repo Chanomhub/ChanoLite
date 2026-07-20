@@ -154,17 +154,29 @@ class DownloadManager extends ChangeNotifier {
       // Retrieve metadata using URL as key
       final metadata = metadataMap[task.url] as Map<String, dynamic>?;
 
+      String resolvedFilePath = task.savedDir + Platform.pathSeparator + fileName;
+      if (Platform.isAndroid) {
+        final localFile = File(resolvedFilePath);
+        if (!await localFile.exists()) {
+          final publicFile = File('/storage/emulated/0/Download/$fileName');
+          if (await publicFile.exists()) {
+            resolvedFilePath = publicFile.path;
+          }
+        }
+      }
+
       final localTask = DownloadTask(
         url: task.url,
         status: status,
         progress: task.progress / 100.0,
-        filePath: task.savedDir + Platform.pathSeparator + fileName,
+        filePath: resolvedFilePath,
         fileName: fileName,
         type: type,
         taskId: task.taskId,
         imageUrl: metadata?['imageUrl'],
         version: metadata?['version'],
         engine: metadata?['engine'],
+        title: metadata?['title'],
       );
       newTasks.add(localTask);
     }
@@ -204,11 +216,13 @@ class DownloadManager extends ChangeNotifier {
         String? imageUrl,
         String? version,
         String? engine,
+        String? title,
       }) async {
     print('=== DownloadManager.startDownload START ===');
     print('URL: $url');
     print('Filename: $suggestedFilename');
     print('Has cookies: ${cookies?.isNotEmpty ?? false}');
+    print('Title: $title');
     
     if (_tasks.any((task) =>
     task.url == url &&
@@ -239,27 +253,52 @@ class DownloadManager extends ChangeNotifier {
       } else {
         final directory = await getApplicationDocumentsDirectory();
         savePath = directory.path;
-        print('DownloadManager: Documents directory: $savePath');
+        print('DownloadManager: Non-Android downloads directory: $savePath');
       }
     }
 
     if (savePath == null) {
-      print('ERROR: Could not determine a save path. Cannot start download.');
+      print('ERROR: Could not resolve save path directory!');
       return;
     }
 
-    final fileName = suggestedFilename ?? path.basename(url.split('?').first);
-    print('DownloadManager: Final filename: $fileName');
-    print('DownloadManager: Save path: $savePath');
+    // Determine filename
+    String fileName = suggestedFilename ?? url.split('/').last;
+    if (fileName.contains('?')) {
+      fileName = fileName.split('?').first;
+    }
 
-    final type = _archiveExtensions.any(
-          (ext) => fileName.toLowerCase().endsWith(ext),
-    )
-        ? DownloadType.archive
-        : DownloadType.file;
+    // Clean up filename to prevent directory traversal
+    fileName = fileName.replaceAll('/', '_').replaceAll('\\', '_');
+    
+    // Add unique prefix to avoid collisions if file already exists in same folder
+    final checkFile = File(path.join(savePath, fileName));
+    if (await checkFile.exists()) {
+      final base = path.basenameWithoutExtension(fileName);
+      final ext = path.extension(fileName);
+      int counter = 1;
+      while (await File(path.join(savePath, '${base} (${counter})${ext}')).exists()) {
+        counter++;
+      }
+      fileName = '${base} (${counter})${ext}';
+      print('DownloadManager: File already exists, renamed to: $fileName');
+    }
+
+    // Determine download type
+    DownloadType type = DownloadType.file;
+    final lowerName = fileName.toLowerCase();
+    if (lowerName.endsWith('.zip') || lowerName.endsWith('.7z') || lowerName.endsWith('.rar') || lowerName.endsWith('.tar') || lowerName.endsWith('.gz')) {
+      type = DownloadType.archive;
+    }
+
+    // Setup headers
+    final Map<String, String> headers = {};
+    if (cookies != null && cookies.isNotEmpty) {
+      headers['Cookie'] = cookies;
+    }
 
     // Save metadata
-    if (imageUrl != null || version != null || engine != null) {
+    if (imageUrl != null || version != null || engine != null || title != null) {
       final metadataString = prefs.getString(metadataKey);
       final Map<String, dynamic> metadataMap = metadataString != null
           ? json.decode(metadataString)
@@ -269,6 +308,7 @@ class DownloadManager extends ChangeNotifier {
         'imageUrl': imageUrl,
         'version': version,
         'engine': engine,
+        'title': title,
       };
       
       await prefs.setString(metadataKey, json.encode(metadataMap));
@@ -276,19 +316,12 @@ class DownloadManager extends ChangeNotifier {
     }
 
     try {
-      // Build headers - use cookies from browser session if available
-      final Map<String, String> headers = {};
-      if (cookies != null && cookies.isNotEmpty) {
-        headers['Cookie'] = cookies;
-        print('DownloadManager: Using browser cookies: $cookies');
-      }
-
       print('DownloadManager: Calling FlutterDownloader.enqueue...');
       print('  - url: $url');
       print('  - savedDir: $savePath');
       print('  - fileName: $fileName');
       print('  - headers: $headers');
-      
+
       final taskId = await downloader.FlutterDownloader.enqueue(
         url: url,
         savedDir: savePath,
@@ -313,6 +346,7 @@ class DownloadManager extends ChangeNotifier {
           imageUrl: imageUrl,
           version: version,
           engine: engine,
+          title: title,
         );
         _tasks.add(task);
         print('DownloadManager: Task added to list. Total tasks: ${_tasks.length}');
@@ -421,6 +455,14 @@ class DownloadManager extends ChangeNotifier {
         type: type,
         taskId: taskId,
       );
+      notifyListeners();
+    }
+  }
+
+  void updateTaskPath(String url, String filePath) {
+    final index = _tasks.indexWhere((task) => task.url == url);
+    if (index != -1) {
+      _tasks[index] = _tasks[index].copyWith(filePath: filePath);
       notifyListeners();
     }
   }

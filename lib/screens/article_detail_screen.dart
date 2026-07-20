@@ -546,6 +546,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
     // Store the screen context before showing dialog
     final screenContext = context;
+    final resolvedUrl = resolveDownloadUrl(link.url);
 
     showDialog(
       context: context,
@@ -559,14 +560,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
               child: const Text('External Browser'),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                _openLink(screenContext, link.url, downloadManager, authToken, article, useExternalBrowser: true);
+                _openLink(screenContext, resolvedUrl, downloadManager, authToken, article, useExternalBrowser: true);
               },
             ),
             FilledButton(
               child: const Text('In-App Browser'),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                _openLink(screenContext, link.url, downloadManager, authToken, article, useExternalBrowser: false);
+                _openLink(screenContext, resolvedUrl, downloadManager, authToken, article, useExternalBrowser: false);
               },
             ),
           ],
@@ -679,7 +680,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             );
         } else {
           debugPrint('ArticleDetailScreen: Unable to show dialog - context not mounted');
-          // Fallback: Just start download directly
           downloadManager.startDownload(
             downloadStartRequest.url.toString(),
             suggestedFilename: fileName,
@@ -687,6 +687,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             imageUrl: article.coverImage ?? article.mainImage,
             version: article.ver?.toString(),
             engine: article.engine,
+            title: article.title,
           );
           debugPrint('ArticleDetailScreen: Download started directly (fallback)');
         }
@@ -710,6 +711,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       imageUrl: article.coverImage ?? article.mainImage,
       version: article.ver?.toString(),
       engine: article.engine,
+      title: article.title,
     );
 
     if (dialogContext.mounted) {
