@@ -4,6 +4,7 @@ import 'package:chopper/chopper.dart';
 import 'package:chanolite/services/api/api_client.dart';
 import 'package:chanomhub_flutter/chanomhub_flutter.dart' hide User, Profile, Author;
 import 'package:chanomhub_flutter/chanomhub_flutter.dart' as sdk_models;
+import 'package:dio/dio.dart' as dio;
 import 'user_api_service.dart';
 
 class UserService {
@@ -30,6 +31,42 @@ class UserService {
 
   // User and Authentication
 
+  // User and Authentication
+
+  Future<User> exchangeBetterAuthSession(String cookie) async {
+    if (sdk == null) {
+      throw Exception('SDK is not initialized');
+    }
+    
+    final response = await sdk!.dio.post(
+      '/auth/exchange',
+      options: dio.Options(
+        headers: {
+          'Cookie': cookie,
+        },
+      ),
+    );
+
+    final responseBody = response.data as Map<String, dynamic>;
+
+    if (responseBody['data'] != null) {
+      final data = responseBody['data'];
+      final userMap = data['user'];
+      return User.fromJson(userMap).copyWith(
+        refreshToken: data['refreshToken'],
+        expiresIn: data['expiresIn'],
+      );
+    }
+    
+    final userMap = responseBody['user'];
+    return User.fromJson(userMap).copyWith(
+      refreshToken: responseBody['refreshToken'],
+      expiresIn: responseBody['expiresIn'],
+    );
+  }
+
+  // User and Authentication
+  
   // User and Authentication
 
   Future<User> getCurrentUser() async {

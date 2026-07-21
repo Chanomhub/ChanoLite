@@ -1,7 +1,8 @@
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/models/user_model.dart';
 import 'package:chanolite/screens/registration_screen.dart';
-import 'package:chanolite/services/supabase_auth_service.dart';
+import 'package:chanolite/widgets/google_sso_webview.dart';
+import 'package:chanolite/constants/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -92,8 +93,29 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleSignIn(AuthManager auth) async {
+    final loginUrl = '${AppConfig.apiBaseUrl}/api/auth/sign-in/social?provider=google&callbackURL=https://www.chanomhub.com/callback';
+    const callbackUrl = 'https://www.chanomhub.com/callback';
+
+    final String? cookies = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => GoogleSsoWebview(
+          loginUrl: loginUrl,
+          callbackUrl: callbackUrl,
+        ),
+      ),
+    );
+
+    if (cookies == null || cookies.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google sign-in cancelled or failed')),
+        );
+      }
+      return;
+    }
+
     try {
-      await auth.loginWithGoogle();
+      await auth.loginWithGoogle(cookies);
       if (!mounted) {
         return;
       }
@@ -233,40 +255,37 @@ class _LoginScreenState extends State<LoginScreen> {
                   : const Text('Sign in'),
             ),
           ),
-          // Google SSO Button - only show if Supabase is available
-          if (SupabaseAuthService.instance.isAvailable) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Expanded(child: Divider()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'or',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'or',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const Expanded(child: Divider()),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: auth.isLoading ? null : () => _handleGoogleSignIn(auth),
-                icon: Image.network(
-                  'https://www.google.com/favicon.ico',
-                  width: 20,
-                  height: 20,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.login),
-                ),
-                label: const Text('Sign in with Google'),
               ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: auth.isLoading ? null : () => _handleGoogleSignIn(auth),
+              icon: Image.network(
+                'https://www.google.com/favicon.ico',
+                width: 20,
+                height: 20,
+                errorBuilder: (_, __, ___) => const Icon(Icons.login),
+              ),
+              label: const Text('Sign in with Google'),
             ),
-          ],
+          ),
           TextButton(
             onPressed: auth.isLoading
                 ? null

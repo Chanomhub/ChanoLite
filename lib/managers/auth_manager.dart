@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:chanolite/models/user_model.dart';
 import 'package:chanolite/services/api/api_client.dart';
 import 'package:chanolite/services/api/user_service.dart';
-import 'package:chanolite/services/supabase_auth_service.dart';
 import 'package:chanomhub_flutter/chanomhub_flutter.dart' hide User, Profile, Download, Article, Author;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -104,14 +103,9 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  /// Login using Google SSO via Supabase.
-  /// Initiates OAuth flow, then exchanges Supabase token with backend.
-  Future<void> loginWithGoogle() async {
-    final supabaseAuth = SupabaseAuthService.instance;
-    if (!supabaseAuth.isAvailable) {
-      throw Exception('Supabase is not initialized');
-    }
-
+  /// Login using Google SSO via Better Auth cookie.
+  /// Exchanges Better Auth session cookie with backend for legacy JWT tokens.
+  Future<void> loginWithGoogle(String cookie) async {
     _loading = true;
     notifyListeners();
 
@@ -119,22 +113,8 @@ class AuthManager extends ChangeNotifier {
       // Clear any existing auth token to avoid sending stale credentials to the backend
       ApiClient.updateAuthToken(null);
 
-      // Initiate Google OAuth flow
-      await supabaseAuth.signInWithGoogle();
-
-      // After redirect, get the access token
-      final accessToken = supabaseAuth.accessToken;
-      if (accessToken == null) {
-        throw Exception('No access token from Supabase');
-      }
-
-      // Exchange Supabase token with backend
-      print('Exchanging Supabase token for backend session... Token length: ${accessToken.length}');
-      
-      // Some backends require the Supabase token in the Authorization header
-      ApiClient.updateAuthToken(accessToken);
-      
-      final user = await _userService.loginWithSSO(accessToken);
+      // Exchange Better Auth session cookie with backend
+      final user = await _userService.exchangeBetterAuthSession(cookie);
       await _addOrUpdateAccount(user);
       await _setActive(user);
     } finally {
