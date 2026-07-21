@@ -16,23 +16,52 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for new commits since last nightly
+        id: check_new_commits
+        run: |
+          git fetch --tags --force
+          LATEST_TAG=$(git tag -l "nightly-*" --sort=-v:refname | head -n 1)
+          echo "Latest nightly tag: $LATEST_TAG"
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No nightly tag found. Proceeding with build."
+            echo "skip=false" >> $GITHUB_OUTPUT
+          else
+            TAG_COMMIT=$(git rev-list -n 1 "$LATEST_TAG")
+            HEAD_COMMIT=$(git rev-parse HEAD)
+            echo "Tag commit: $TAG_COMMIT"
+            echo "HEAD commit: $HEAD_COMMIT"
+            if [ "$TAG_COMMIT" = "$HEAD_COMMIT" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+              echo "No new commits since last nightly tag and triggered by schedule. Skipping build."
+              echo "skip=true" >> $GITHUB_OUTPUT
+            else
+              echo "Proceeding with build."
+              echo "skip=false" >> $GITHUB_OUTPUT
+            fi
+          fi
 
       - name: Set up JDK 17
+        if: steps.check_new_commits.outputs.skip != 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Flutter
+        if: steps.check_new_commits.outputs.skip != 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
       - name: Get current date
+        if: steps.check_new_commits.outputs.skip != 'true'
         id: date
         run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
 
       - name: Check if today's nightly already exists
+        if: steps.check_new_commits.outputs.skip != 'true'
         id: check_release
         run: |
           TAG_PREFIX="nightly-${{ steps.date.outputs.date }}"
@@ -46,11 +75,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Skip if nightly already exists
-        if: steps.check_release.outputs.exists == 'true'
+        if: steps.check_new_commits.outputs.skip != 'true' && steps.check_release.outputs.exists == 'true'
         run: echo "Nightly for today already exists. Skipping build."
 
       - name: Create .env file
-        if: steps.check_release.outputs.exists == 'false'
+        if: steps.check_new_commits.outputs.skip != 'true' && steps.check_release.outputs.exists == 'false'
         run: |
           cat > .env << EOF
           APPLOVIN_SDK_KEY=${{ secrets.APPLOVIN_SDK_KEY }}
@@ -60,11 +89,11 @@ jobs:
           EOF
 
       - name: Get Flutter dependencies
-        if: steps.check_release.outputs.exists == 'false'
+        if: steps.check_new_commits.outputs.skip != 'true' && steps.check_release.outputs.exists == 'false'
         run: flutter pub get
 
       - name: Download Android Keystore
-        if: steps.check_release.outputs.exists == 'false'
+        if: steps.check_new_commits.outputs.skip != 'true' && steps.check_release.outputs.exists == 'false'
         id: android_keystore
         uses: timheuer/base64-to-file@v1.2
         with:
@@ -72,7 +101,7 @@ jobs:
           encodedString: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build APK
-        if: steps.check_release.outputs.exists == 'false'
+        if: steps.check_new_commits.outputs.skip != 'true' && steps.check_release.outputs.exists == 'false'
         run: flutter build apk --release
         env:
           STORE_FILE: ${{ steps.android_keystore.outputs.filePath }}
@@ -81,7 +110,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Build App Bundle
-        if: steps.check_release.outputs.exists == 'false'
+        if: steps.check_new_commits.outputs.skip != 'true' && steps.check_release.outputs.exists == 'false'
         run: flutter build appbundle --release
         env:
           STORE_FILE: ${{ steps.android_keystore.outputs.filePath }}
@@ -90,12 +119,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Get short SHA
-        if: steps.check_release.outputs.exists == 'false'
+        if: steps.check_new_commits.outputs.skip != 'true' && steps.check_release.outputs.exists == 'false'
         id: sha
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Create Nightly Release
-        if: steps.check_release.outputs.exists == 'false'
+        if: steps.check_new_commits.outputs.skip != 'true' && steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly-${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}
@@ -117,7 +146,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🧹 Cleanup old nightly releases (older than 7 days)
-        if: always()
+        if: always() && steps.check_new_commits.outputs.skip != 'true'
         run: |
           echo "Cleaning up nightly releases older than 7 days..."
           gh release list --limit 100 --json tagName,createdAt -q '.[] | select(.tagName | startswith("nightly-")) | [.tagName, .createdAt]' |
