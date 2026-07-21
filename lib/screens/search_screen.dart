@@ -7,32 +7,15 @@ import 'package:chanolite/repositories/article_repository.dart';
 import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/theme/app_theme.dart';
 import 'package:chanolite/theme/theme_notifier.dart';
+import 'package:chanolite/widgets/search_filter_sheet.dart';
 import 'package:chanolite/widgets/search_menu_component.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:chanolite/extensions/context_extensions.dart';
+import 'package:chanolite/theme/app_spacing.dart';
 import 'package:chanolite/screens/article_detail_screen.dart';
 import 'package:chanolite/models/article_model.dart';
-
-const _statusOptions = [
-  'PUBLISHED',
-  'PENDING_REVIEW',
-  'DRAFT',
-  'ARCHIVED',
-  'NOT_APPROVED',
-  'NEEDS_REVISION',
-];
-
-const _platformSuggestions = [
-  'Windows',
-  'Android',
-  'iOS',
-  'Mac',
-  'Linux',
-  'Web',
-];
-
-const _engineSuggestions = ['RENPY', 'UNITY', 'UNREAL', 'GODOT', 'RPG_MAKER'];
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({
@@ -61,14 +44,6 @@ class _SearchScreenState extends State<SearchScreen> {
   final CacheService _cacheService = CacheService();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final TextEditingController _filterTagController = TextEditingController();
-  final TextEditingController _filterCategoryController =
-      TextEditingController();
-  final TextEditingController _filterPlatformController =
-      TextEditingController();
-  final TextEditingController _filterEngineController = TextEditingController();
-  final TextEditingController _filterSequentialCodeController =
-      TextEditingController();
 
   List<Article> _articles = [];
   int? _articlesCount;
@@ -108,11 +83,6 @@ class _SearchScreenState extends State<SearchScreen> {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _searchController.dispose();
-    _filterTagController.dispose();
-    _filterCategoryController.dispose();
-    _filterPlatformController.dispose();
-    _filterEngineController.dispose();
-    _filterSequentialCodeController.dispose();
     super.dispose();
   }
 
@@ -275,184 +245,30 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _openFilters() async {
-    _filterTagController.text = _selectedTag ?? '';
-    _filterCategoryController.text = _selectedCategory ?? '';
-    _filterPlatformController.text = _selectedPlatform ?? '';
-    _filterEngineController.text = _selectedEngine ?? '';
-    _filterSequentialCodeController.text = _selectedSequentialCode ?? '';
-    String statusValue = _selectedStatus ?? '';
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: StatefulBuilder(
-            builder: (context, setModalState) {
-              return SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Filters',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _filterTagController,
-                      decoration: const InputDecoration(
-                        labelText: 'Tag',
-                        hintText: 'e.g. romance',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _filterCategoryController,
-                      decoration: const InputDecoration(
-                        labelText: 'Category',
-                        hintText: 'e.g. update',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _filterPlatformController,
-                      decoration: const InputDecoration(
-                        labelText: 'Platform',
-                        hintText: 'e.g. Windows',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _SuggestionWrap(
-                      title: 'Quick platforms',
-                      suggestions: _platformSuggestions,
-                      onSelected: (value) {
-                        setModalState(() {
-                          _filterPlatformController.text = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _filterEngineController,
-                      decoration: const InputDecoration(
-                        labelText: 'Engine',
-                        hintText: 'e.g. RENPY',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _SuggestionWrap(
-                      title: 'Quick engines',
-                      suggestions: _engineSuggestions,
-                      onSelected: (value) {
-                        setModalState(() {
-                          _filterEngineController.text = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _filterSequentialCodeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Sequential Code',
-                        hintText: 'e.g. HJ154',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: statusValue,
-                      decoration: const InputDecoration(labelText: 'Status'),
-                      items: [
-                        const DropdownMenuItem(value: '', child: Text('Any')),
-                        ..._statusOptions.map(
-                          (status) => DropdownMenuItem(
-                            value: status,
-                            child: Text(_formatStatusLabel(status)),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setModalState(() {
-                          statusValue = value ?? '';
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            setModalState(() {
-                              _filterTagController.clear();
-                              _filterCategoryController.clear();
-                              _filterPlatformController.clear();
-                              _filterEngineController.clear();
-                              _filterSequentialCodeController.clear();
-                              statusValue = '';
-                            });
-                          },
-                          child: const Text('Clear all'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            FocusScope.of(context).unfocus();
-                            Navigator.of(context).pop();
-                            if (!mounted) {
-                              return;
-                            }
-                            setState(() {
-                              _selectedTag = _normalizeFilter(
-                                _filterTagController.text,
-                              );
-                              _selectedCategory = _normalizeFilter(
-                                _filterCategoryController.text,
-                              );
-                              _selectedPlatform = _normalizeFilter(
-                                _filterPlatformController.text,
-                              );
-                              _selectedEngine = _normalizeFilter(
-                                _filterEngineController.text,
-                              );
-                              _selectedSequentialCode = _normalizeFilter(
-                                _filterSequentialCodeController.text,
-                              );
-                              _selectedStatus = statusValue.isEmpty
-                                  ? null
-                                  : statusValue;
-                            });
-                            _loadArticles(reset: true);
-                          },
-                          child: const Text('Apply'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
+    final result = await SearchFilterSheet.show(
+      context,
+      initialFilters: SearchFilterData(
+        tag: _selectedTag,
+        category: _selectedCategory,
+        platform: _selectedPlatform,
+        engine: _selectedEngine,
+        sequentialCode: _selectedSequentialCode,
+        status: _selectedStatus,
+      ),
     );
+
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _selectedTag = result.tag;
+      _selectedCategory = result.category;
+      _selectedPlatform = result.platform;
+      _selectedEngine = result.engine;
+      _selectedSequentialCode = result.sequentialCode;
+      _selectedStatus = result.status;
+    });
+
+    _loadArticles(reset: true);
   }
 
   Widget _buildActiveFilters() {
@@ -784,41 +600,4 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 }
 
-class _SuggestionWrap extends StatelessWidget {
-  const _SuggestionWrap({
-    required this.title,
-    required this.suggestions,
-    required this.onSelected,
-  });
 
-  final String title;
-  final List<String> suggestions;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    if (suggestions.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: suggestions
-              .map(
-                (item) => ActionChip(
-                  label: Text(item),
-                  onPressed: () => onSelected(item),
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
-  }
-}

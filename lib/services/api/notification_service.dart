@@ -2,10 +2,10 @@
 import 'package:chanolite/models/notification_model.dart';
 import 'api_client.dart';
 
-class NotificationService {
+class NotificationApiService {
   final ApiClient _apiClient;
 
-  NotificationService({ApiClient? apiClient})
+  NotificationApiService({ApiClient? apiClient})
       : _apiClient = apiClient ?? ApiClient();
 
   Future<MultipleNotificationsResponse> getNotifications({

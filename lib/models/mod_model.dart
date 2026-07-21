@@ -110,7 +110,10 @@ class Mod {
       creditTo: json['creditTo'],
       images: List<String>.from(json['images']),
       type: json['type'],
-      status: ModStatus.values.firstWhere((e) => e.toString() == 'ModStatus.${json['status']}'),
+      status: ModStatus.values.firstWhere(
+        (e) => e.toString() == 'ModStatus.${json['status']}',
+        orElse: () => ModStatus.PENDING,
+      ),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       articleId: json['articleId'],
@@ -154,25 +157,7 @@ class CreateModCategoryDto {
   };
 }
 
-class ModCategoryResponseDto {
-  final int id;
-  final String name;
-  final String slug;
-
-  ModCategoryResponseDto({
-    required this.id,
-    required this.name,
-    required this.slug,
-  });
-
-  factory ModCategoryResponseDto.fromJson(Map<String, dynamic> json) {
-    return ModCategoryResponseDto(
-      id: json['id'],
-      name: json['name'],
-      slug: json['slug'],
-    );
-  }
-}
+typedef ModCategoryResponseDto = ModCategory;
 
 class SingleModResponse {
   final Mod mod;

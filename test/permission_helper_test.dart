@@ -16,22 +16,57 @@ import 'package:permission_handler_platform_interface/permission_handler_platfor
 class MockDeviceInfoPlatform extends Mock
     with MockPlatformInterfaceMixin
     implements DeviceInfoPlatform {
-  // @override removed as it does not override inherited member in this version of the interface
-  Future<AndroidDeviceInfo> get androidInfo =>
-      super.noSuchMethod(
-        Invocation.getter(#androidInfo),
-        returnValue: Future.value(MockAndroidDeviceInfo()),
-        returnValueForMissingStub: Future.value(MockAndroidDeviceInfo()),
-      ) as Future<AndroidDeviceInfo>;
+  MockAndroidDeviceInfo androidInfoMock = MockAndroidDeviceInfo();
+
+  @override
+  Future<AndroidDeviceInfo> get androidInfo async => androidInfoMock;
+
+  @override
+  Future<BaseDeviceInfo> deviceInfo() async => BaseDeviceInfo(androidInfoMock.data);
 }
 
 class MockAndroidDeviceInfo extends Fake implements AndroidDeviceInfo {
-  int _sdkInt = 30; // 默认值
+  int _sdkInt = 30;
 
   @override
   AndroidBuildVersion get version => MockAndroidBuildVersion(sdkInt: _sdkInt);
 
-  // 使用 setter 来修改 SDK 版本
+  @override
+  Map<String, dynamic> get data => {
+    'version': {
+      'sdkInt': _sdkInt,
+      'baseOS': 'Android',
+      'codename': 'REL',
+      'incremental': '1',
+      'previewSdkInt': 0,
+      'release': '10',
+      'resourcesCodename': 'REL',
+      'securityPatch': '2023-01-01',
+    },
+    'board': 'board',
+    'bootloader': 'bootloader',
+    'brand': 'brand',
+    'device': 'device',
+    'display': 'display',
+    'fingerprint': 'fingerprint',
+    'hardware': 'hardware',
+    'host': 'host',
+    'id': 'id',
+    'manufacturer': 'manufacturer',
+    'model': 'model',
+    'product': 'product',
+    'supported32BitAbis': <String>['armeabi-v7a'],
+    'supported64BitAbis': <String>['arm64-v8a'],
+    'supportedAbis': <String>['arm64-v8a'],
+    'tags': 'release-keys',
+    'type': 'user',
+    'isPhysicalDevice': true,
+    'systemFeatures': <String>[],
+    'serialNumber': 'unknown',
+    'sdkInt': _sdkInt,
+    'isLowRamDevice': false,
+  };
+
   set sdkInt(int value) => _sdkInt = value;
 }
 
@@ -44,22 +79,21 @@ class MockAndroidBuildVersion extends Fake implements AndroidBuildVersion {
 class MockPermissionHandlerPlatform extends Mock
     with MockPlatformInterfaceMixin
     implements PermissionHandlerPlatform {
-  @override
-  Future<Map<Permission, PermissionStatus>> requestPermissions(List<Permission> permissions) {
-    return super.noSuchMethod(
-      Invocation.method(#requestPermissions, [permissions]),
-      returnValue: Future.value(<Permission, PermissionStatus>{}),
-      returnValueForMissingStub: Future.value(<Permission, PermissionStatus>{}),
-    );
-  }
+  PermissionStatus requestedStatus = PermissionStatus.granted;
 
   @override
-  Future<PermissionStatus> checkPermissionStatus(Permission permission) {
-    return super.noSuchMethod(
-      Invocation.method(#checkPermissionStatus, [permission]),
-      returnValue: Future.value(PermissionStatus.denied),
-      returnValueForMissingStub: Future.value(PermissionStatus.denied),
-    );
+  Future<Map<Permission, PermissionStatus>> requestPermissions(List<Permission> permissions) async {
+    print('DEBUG: requestPermissions called with requestedStatus=$requestedStatus for permissions=$permissions');
+    return {
+      for (final p in permissions) p: requestedStatus,
+    };
+  }
+
+  PermissionStatus statusToReturn = PermissionStatus.denied;
+
+  @override
+  Future<PermissionStatus> checkPermissionStatus(Permission permission) async {
+    return statusToReturn;
   }
 
   @override
@@ -99,110 +133,64 @@ class MockPermissionHandlerPlatform extends Mock
   }
 }
 
+class MockDeviceInfoPlugin extends Mock implements DeviceInfoPlugin {
+  MockAndroidDeviceInfo androidInfoMock = MockAndroidDeviceInfo();
+
+  @override
+  Future<AndroidDeviceInfo> get androidInfo async => androidInfoMock;
+}
+
 void main() {
-  group('PermissionHelper', () {
-    late MockDeviceInfoPlatform deviceInfo;
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('PermissionHelper Test', () {
+    final permissionHandler = MockPermissionHandlerPlatform();
+    late MockDeviceInfoPlugin mockPlugin;
     late MockAndroidDeviceInfo androidInfo;
-    late MockPermissionHandlerPlatform permissionHandler;
-    late DeviceInfoPlatform originalDeviceInfoPlatform;
+
     late PermissionHandlerPlatform originalPermissionHandlerPlatform;
 
     setUp(() {
-      // 重置所有模拟对象
       resetMockitoState();
 
-      deviceInfo = MockDeviceInfoPlatform();
-      androidInfo = MockAndroidDeviceInfo();
-      permissionHandler = MockPermissionHandlerPlatform();
+      mockPlugin = MockDeviceInfoPlugin();
+      androidInfo = mockPlugin.androidInfoMock;
 
-      // 保存原始实例以便在 tearDown 中恢复
-      originalDeviceInfoPlatform = DeviceInfoPlatform.instance;
       originalPermissionHandlerPlatform = PermissionHandlerPlatform.instance;
 
-      DeviceInfoPlatform.instance = deviceInfo;
       PermissionHandlerPlatform.instance = permissionHandler;
-
-      when(deviceInfo.androidInfo).thenAnswer((_) async => androidInfo);
+      androidInfo.sdkInt = 30;
     });
 
     tearDown(() {
-      // 恢复原始实例，而不是设置为 null
-      DeviceInfoPlatform.instance = originalDeviceInfoPlatform;
       PermissionHandlerPlatform.instance = originalPermissionHandlerPlatform;
     });
 
-    test('grants MANAGE_EXTERNAL_STORAGE for Android 11+ (API 30+)', () async {
+    test('returns true for Android 10+ (API 29+) using scoped storage', () async {
       androidInfo.sdkInt = 30;
+      final result30 = await PermissionHelper.requestStoragePermission(deviceInfoPlugin: mockPlugin);
+      expect(result30, true);
 
-      // 模拟所有可能的权限检查和请求
-      when(permissionHandler.checkPermissionStatus(Permission.manageExternalStorage))
-          .thenAnswer((_) async => PermissionStatus.denied);
-      when(permissionHandler.shouldShowRequestPermissionRationale(Permission.manageExternalStorage))
-          .thenAnswer((_) async => false);
-
-      // 模拟权限请求成功
-      when(permissionHandler.requestPermissions([Permission.manageExternalStorage]))
-          .thenAnswer((_) async => {
-        Permission.manageExternalStorage: PermissionStatus.granted,
-      });
-
-      final result = await PermissionHelper.requestStoragePermission();
-      expect(result, true);
-
-      // 验证权限请求被调用
-      verify(permissionHandler.requestPermissions([Permission.manageExternalStorage])).called(1);
-    });
-
-    test('denies MANAGE_EXTERNAL_STORAGE for Android 11+ (API 30+)', () async {
-      androidInfo.sdkInt = 30;
-
-      // 模拟所有可能的权限检查和请求
-      when(permissionHandler.checkPermissionStatus(Permission.manageExternalStorage))
-          .thenAnswer((_) async => PermissionStatus.denied);
-      when(permissionHandler.shouldShowRequestPermissionRationale(Permission.manageExternalStorage))
-          .thenAnswer((_) async => false);
-
-      // 模拟权限请求被拒绝
-      when(permissionHandler.requestPermissions([Permission.manageExternalStorage]))
-          .thenAnswer((_) async => {
-        Permission.manageExternalStorage: PermissionStatus.denied,
-      });
-
-      final result = await PermissionHelper.requestStoragePermission();
-      expect(result, false);
-    });
-
-    test('grants Permission.storage for Android 10 (API 29) and below', () async {
       androidInfo.sdkInt = 29;
+      final result29 = await PermissionHelper.requestStoragePermission(deviceInfoPlugin: mockPlugin);
+      expect(result29, true);
+    });
 
-      // 模拟所有可能的权限检查和请求
-      when(permissionHandler.checkPermissionStatus(Permission.storage))
-          .thenAnswer((_) async => PermissionStatus.denied);
-      when(permissionHandler.shouldShowRequestPermissionRationale(Permission.storage))
-          .thenAnswer((_) async => false);
+    test('grants Permission.storage for Android 9 (API 28) and below', () async {
+      androidInfo.sdkInt = 28;
+      permissionHandler.statusToReturn = PermissionStatus.denied;
+      permissionHandler.requestedStatus = PermissionStatus.granted;
 
-      // 模拟权限请求成功
-      when(permissionHandler.requestPermissions([Permission.storage]))
-          .thenAnswer((_) async => {Permission.storage: PermissionStatus.granted});
-
-      final result = await PermissionHelper.requestStoragePermission();
+      final result = await PermissionHelper.requestStoragePermission(deviceInfoPlugin: mockPlugin);
       expect(result, true);
     });
 
-    test('denies Permission.storage for Android 10 (API 29) and below', () async {
-      androidInfo.sdkInt = 29;
+    test('denies Permission.storage for Android 9 (API 28) and below', () async {
+      androidInfo.sdkInt = 28;
+      permissionHandler.statusToReturn = PermissionStatus.denied;
+      permissionHandler.requestedStatus = PermissionStatus.denied;
 
-      // 模拟所有可能的权限检查和请求
-      when(permissionHandler.checkPermissionStatus(Permission.storage))
-          .thenAnswer((_) async => PermissionStatus.denied);
-      when(permissionHandler.shouldShowRequestPermissionRationale(Permission.storage))
-          .thenAnswer((_) async => false);
-
-      // 模拟权限请求被拒绝
-      when(permissionHandler.requestPermissions([Permission.storage]))
-          .thenAnswer((_) async => {Permission.storage: PermissionStatus.denied});
-
-      final result = await PermissionHelper.requestStoragePermission();
+      final result = await PermissionHelper.requestStoragePermission(deviceInfoPlugin: mockPlugin);
       expect(result, false);
     });
   });

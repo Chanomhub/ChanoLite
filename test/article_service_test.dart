@@ -7,7 +7,7 @@ class FakeApiClient extends ApiClient {
   String? lastQuery;
 
   @override
-  Future<Map<String, dynamic>> query(String query, {Map<String, dynamic>? variables}) async {
+  Future<Map<String, dynamic>> query(String query, {bool isRetry = false, Map<String, dynamic>? variables}) async {
     lastQuery = query;
     lastVariables = variables;
     return {

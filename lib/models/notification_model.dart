@@ -20,8 +20,8 @@ class NotificationResponse {
   final NotificationType type;
   final String message;
   final bool isRead;
-  final dynamic entityId;
-  final dynamic entityType;
+  final String? entityId;
+  final String? entityType;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -41,11 +41,14 @@ class NotificationResponse {
     return NotificationResponse(
       id: json['id'],
       userId: json['userId'],
-      type: NotificationType.values.firstWhere((e) => e.toString() == 'NotificationType.${json['type']}'),
+      type: NotificationType.values.firstWhere(
+        (e) => e.toString() == 'NotificationType.${json['type']}',
+        orElse: () => NotificationType.NEW_ARTICLE,
+      ),
       message: json['message'],
       isRead: json['isRead'],
-      entityId: json['entityId'],
-      entityType: json['entityType'],
+      entityId: json['entityId']?.toString(),
+      entityType: json['entityType']?.toString(),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
     );

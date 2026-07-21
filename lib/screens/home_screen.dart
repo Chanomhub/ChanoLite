@@ -16,6 +16,10 @@ import 'package:chanolite/widgets/home/section_header.dart';
 import 'package:chanolite/widgets/home/app_card.dart';
 import 'package:chanolite/widgets/home/top_rated_item.dart';
 
+import 'package:chanolite/extensions/context_extensions.dart';
+import 'package:chanolite/theme/app_spacing.dart';
+import 'package:chanolite/widgets/account_avatar_button.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -146,62 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 12),
           ],
         ),
-        actions: [
-          Consumer<AuthManager>(
-            builder: (context, auth, _) {
-              final theme = Theme.of(context);
-              final user = auth.activeAccount;
-              final hasAccounts = auth.accounts.isNotEmpty;
-
-              Widget avatar;
-              if (user != null && (user.image?.isNotEmpty ?? false)) {
-                avatar = CircleAvatar(
-                  radius: 16,
-                  backgroundImage: NetworkImage(user.image!),
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                );
-              } else {
-                final label = user?.username.isNotEmpty == true
-                    ? user!.username[0].toUpperCase()
-                    : '+';
-                avatar = CircleAvatar(
-                  radius: 16,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  foregroundColor: theme.colorScheme.onPrimaryContainer,
-                  child: Text(label),
-                );
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(999),
-                    onTap: () {
-                      if (hasAccounts) {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (_) => const AccountSwitcherSheet(),
-                        );
-                      } else {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(),
-                          ),
-                        );
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: avatar,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
+        actions: const [
+          AccountAvatarButton(),
         ],
       ),
       body: _buildBody(),

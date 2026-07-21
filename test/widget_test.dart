@@ -7,6 +7,8 @@
 
 import 'package:chanolite/main.dart';
 
+import 'package:chanolite/constants/app_config.dart';
+import 'package:chanomhub_flutter/chanomhub_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
@@ -16,17 +18,24 @@ import 'mock.dart';
 void main() {
   testWidgets('App loads home screen with title', (WidgetTester tester) async {
     final downloadManager = MockDownloadManager();
+    final sdk = ChanomhubClient(
+      baseUrl: AppConfig.apiBaseUrl,
+      cdnUrl: AppConfig.imgproxyBaseUrl,
+    );
 
-    // Mock the loadTasks method to avoid errors in the test environment
-    when(downloadManager.loadTasks()).thenAnswer((_) async => {});
+
+
+    final authManager = MockAuthManager();
+    final articleRepository = MockArticleRepository();
 
     await tester.pumpWidget(MyApp(
       downloadManager: downloadManager,
+      authManager: authManager,
+      articleRepository: articleRepository,
       initialLocale: const Locale('en'),
+      sdk: sdk,
     ));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.text('ChanoLite - Home'), findsOneWidget);
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

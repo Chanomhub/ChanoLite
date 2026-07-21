@@ -31,7 +31,10 @@ class DownloadLinkDTO {
       name: json['name'],
       url: json['url'],
       isActive: json['isActive'],
-      status: DownloadStatus.values.firstWhere((e) => e.toString() == 'DownloadStatus.${json['status']}'),
+      status: DownloadStatus.values.firstWhere(
+        (e) => e.toString() == 'DownloadStatus.${json['status']}',
+        orElse: () => DownloadStatus.PENDING,
+      ),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       note: json['note'],

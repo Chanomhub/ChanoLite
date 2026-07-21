@@ -6,6 +6,8 @@ import 'installed_apps_service.dart';
 
 import '../managers/download_manager.dart';
 
+import 'game_tools_catalog.dart';
+
 /// Service for managing game tools
 class GameToolsService {
   GameToolsService._();
@@ -31,21 +33,21 @@ class GameToolsService {
   }
 
   /// Get all available tools
-  static List<GameTool> getAllTools() => GameToolsData.tools;
+  static List<GameTool> getAllTools() => GameToolsCatalog.getAllTools();
 
   /// Get all main tools (excluding plugins)
-  static List<GameTool> getMainTools() => GameToolsData.mainTools;
+  static List<GameTool> getMainTools() => GameToolsCatalog.getMainTools();
 
   /// Get plugins for a parent tool
   static List<GameTool> getPluginsFor(String parentToolId) =>
-      GameToolsData.getPluginsFor(parentToolId);
+      GameToolsCatalog.getPluginsFor(parentToolId);
 
   /// Get tool by ID
-  static GameTool? getToolById(String id) => GameToolsData.getToolById(id);
+  static GameTool? getToolById(String id) => GameToolsCatalog.getToolById(id);
 
   /// Get all tools that support a specific engine
   static List<GameTool> getToolsForEngine(String engine) =>
-      GameToolsData.getToolsForEngine(engine);
+      GameToolsCatalog.getToolsForEngine(engine);
 
   /// Check if a tool is installed
   static Future<bool> isToolInstalled(GameTool tool) async {

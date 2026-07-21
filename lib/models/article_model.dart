@@ -99,6 +99,25 @@ class Article {
         sequentialCode = null,
         downloads = [];
 
+  static List<String> _parseImages(dynamic imagesData) {
+    if (imagesData == null) {
+      return <String>[];
+    } else if (imagesData is List) {
+      return imagesData.map<String>((e) {
+        String? url;
+        if (e is Map && e.containsKey('url')) {
+          url = e['url']?.toString();
+        } else if (e is String) {
+          url = e;
+        } else if (e is Map && e.containsKey('path')) {
+          url = e['path']?.toString();
+        }
+        return ImageUrlHelper.resolve(url) ?? '';
+      }).where((element) => element.isNotEmpty).toList();
+    }
+    return <String>[];
+  }
+
   factory Article.fromJson(Map<String, dynamic> json) {
     int parseId(dynamic id) {
       if (id == null) return 0;
@@ -114,6 +133,10 @@ class Article {
       return null;
     }
 
+    final rawTags = json['tags'] ?? json['tagList'];
+    final rawCategories = json['categories'] ?? json['categoryList'];
+    final rawPlatforms = json['platforms'] ?? json['platformList'];
+
     return Article(
       id: parseId(json['id']),
       title: json['title']?.toString() ?? '',
@@ -127,35 +150,17 @@ class Article {
       status: json['status']?.toString(),
       engine: json['engine'] is Map ? json['engine']['name']?.toString() : json['engine']?.toString(),
       mainImage: ImageUrlHelper.resolve(json['mainImage']?.toString()),
-      images: (() {
-        final dynamic imagesData = json['images'];
-        if (imagesData == null) {
-          return <String>[];
-        } else if (imagesData is List) {
-          return imagesData.map<String>((e) {
-            String? url;
-            if (e is Map && e.containsKey('url')) {
-              url = e['url']?.toString();
-            } else if (e is String) {
-              url = e;
-            } else if (e is Map && e.containsKey('path')) {
-              url = e['path']?.toString();
-            }
-            return ImageUrlHelper.resolve(url) ?? '';
-          }).where((element) => element.isNotEmpty).toList();
-        }
-        return <String>[]; 
-      })(),
+      images: _parseImages(json['images']),
       backgroundImage: ImageUrlHelper.resolve(json['backgroundImage']?.toString()),
       coverImage: ImageUrlHelper.resolve(json['coverImage']?.toString()),
-      tagList: (json['tags'] is List)
-          ? (json['tags'] as List).map((e) => e is Map ? e['name']?.toString() ?? '' : e.toString()).toList()
+      tagList: (rawTags is List)
+          ? rawTags.map((e) => e is Map ? e['name']?.toString() ?? '' : e.toString()).toList()
           : [],
-      categoryList: (json['categories'] is List)
-          ? (json['categories'] as List).map((e) => e is Map ? e['name']?.toString() ?? '' : e.toString()).toList()
+      categoryList: (rawCategories is List)
+          ? rawCategories.map((e) => e is Map ? e['name']?.toString() ?? '' : e.toString()).toList()
           : [],
-      platformList: (json['platforms'] is List)
-          ? (json['platforms'] as List).map((e) => e is Map ? e['name']?.toString() ?? '' : e.toString()).toList()
+      platformList: (rawPlatforms is List)
+          ? rawPlatforms.map((e) => e is Map ? e['name']?.toString() ?? '' : e.toString()).toList()
           : [],
       author: json['author'] != null ? Author.fromJson(json['author']) : null,
       favorited: json['favorited'] == true,
@@ -184,8 +189,11 @@ class Article {
       'images': images,
       'backgroundImage': backgroundImage,
       'coverImage': coverImage,
+      'tags': tagList,
       'tagList': tagList,
+      'categories': categoryList,
       'categoryList': categoryList,
+      'platforms': platformList,
       'platformList': platformList,
       'author': author?.toJson(),
       'favorited': favorited,

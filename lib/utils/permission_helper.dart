@@ -1,11 +1,14 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionHelper {
-  static Future<bool> requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      final androidInfo = await DeviceInfoPlugin().androidInfo;
+  static Future<bool> requestStoragePermission({DeviceInfoPlugin? deviceInfoPlugin}) async {
+    final isAndroid = !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || Platform.isAndroid);
+    if (isAndroid) {
+      final plugin = deviceInfoPlugin ?? DeviceInfoPlugin();
+      final androidInfo = await plugin.androidInfo;
       final sdkInt = androidInfo.version.sdkInt;
       
       print('Android SDK: $sdkInt');

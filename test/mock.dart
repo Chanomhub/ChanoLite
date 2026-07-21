@@ -4,6 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
+import 'package:chanolite/models/download_task.dart';
+import 'package:chanolite/models/user_model.dart';
+import 'package:chanolite/repositories/article_repository.dart';
+import 'package:chanolite/models/article_model.dart';
 
 typedef Callback = void Function(MethodCall call);
 
@@ -56,5 +60,45 @@ void setupFirebaseAuthMocks([Callback? customHandlers]) {
   });
 }
 
-class MockAuthManager extends Mock implements AuthManager {}
-class MockDownloadManager extends Mock implements DownloadManager {}
+class MockAuthManager extends Mock implements AuthManager {
+  @override
+  Future<void> load() async {}
+  @override
+  bool get isLoading => false;
+  @override
+  bool get isAuthenticated => true;
+  @override
+  List<User> get accounts => [];
+  @override
+  User? get activeAccount => null;
+}
+class MockDownloadManager extends Mock implements DownloadManager {
+  @override
+  Future<void> loadTasks() async {}
+
+  @override
+  List<DownloadTask> get tasks => [];
+
+  @override
+  Map<String, DownloadTask> get downloads => {};
+
+  @override
+  void onDownloadComplete(Function(DownloadTask) callback) {}
+}
+
+class MockArticleRepository extends Mock implements ArticleRepository {
+  @override
+  Future<ArticlesResponse> getArticles({
+    int limit = 20,
+    int offset = 0,
+    String? query,
+    String? tag,
+    String? category,
+    String? platform,
+    String? engine,
+    String? status,
+    String? sequentialCode,
+  }) async {
+    return ArticlesResponse(articles: [], articlesCount: 0);
+  }
+}

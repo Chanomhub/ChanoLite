@@ -3,6 +3,7 @@ import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/screens/account_switcher_sheet.dart';
 import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/services/update_service.dart';
+import 'package:chanolite/models/update_model.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';

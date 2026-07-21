@@ -37,29 +37,32 @@ class ModerationRequest {
       id: json['id'],
       entityType: json['entityType'],
       entityId: json['entityId'],
-      status: ModerationStatus.values.firstWhere((e) => e.toString() == 'ModerationStatus.${json['status']}'),
+      status: ModerationStatus.values.firstWhere(
+        (e) => e.toString() == 'ModerationStatus.${json['status']}',
+        orElse: () => ModerationStatus.PENDING,
+      ),
       requestNote: json['requestNote'],
       reviewNote: json['reviewNote'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       requesterId: json['requesterId'],
       reviewerId: json['reviewerId'],
-      requester: Requester.fromJson(json['requester']),
-      reviewer: json['reviewer'] != null ? Reviewer.fromJson(json['reviewer']) : null,
+      requester: UserSummary.fromJson(json['requester']),
+      reviewer: json['reviewer'] != null ? UserSummary.fromJson(json['reviewer']) : null,
       entityDetails: json['entityDetails'],
     );
   }
 }
 
-class Requester {
+class UserSummary {
   final int id;
   final String name;
   final String? image;
 
-  Requester({required this.id, required this.name, this.image});
+  UserSummary({required this.id, required this.name, this.image});
 
-  factory Requester.fromJson(Map<String, dynamic> json) {
-    return Requester(
+  factory UserSummary.fromJson(Map<String, dynamic> json) {
+    return UserSummary(
       id: json['id'],
       name: json['name'],
       image: json['image'],
@@ -67,18 +70,5 @@ class Requester {
   }
 }
 
-class Reviewer {
-  final int id;
-  final String name;
-  final String? image;
-
-  Reviewer({required this.id, required this.name, this.image});
-
-  factory Reviewer.fromJson(Map<String, dynamic> json) {
-    return Reviewer(
-      id: json['id'],
-      name: json['name'],
-      image: json['image'],
-    );
-  }
-}
+typedef Requester = UserSummary;
+typedef Reviewer = UserSummary;

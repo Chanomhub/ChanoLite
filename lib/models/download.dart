@@ -14,10 +14,14 @@ class Download {
   });
 
   factory Download.fromJson(Map<String, dynamic> json) {
+    final name = json['name']?.toString() ?? 'Unknown';
+    final url = json['url']?.toString() ?? '';
+    final fallbackId = url.isNotEmpty ? url.hashCode.toString() : name.hashCode.toString();
+
     return Download(
-      id: json['id']?.toString() ?? DateTime.now().microsecondsSinceEpoch.toString(),
-      name: json['name'] ?? 'Unknown',
-      url: json['url'] ?? '',
+      id: json['id']?.toString() ?? fallbackId,
+      name: name,
+      url: url,
       isActive: json['isActive'] ?? true,
       vipOnly: json['vipOnly'] ?? false,
     );

@@ -104,9 +104,9 @@ class User {
 
 class Profile {
   final String username;
-  final dynamic bio;
-  final dynamic image;
-  final dynamic backgroundImage;
+  final String? bio;
+  final String? image;
+  final String? backgroundImage;
   final bool following;
   final List<SocialMediaLink> socialMediaLinks;
 
@@ -121,11 +121,11 @@ class Profile {
 
   factory Profile.fromJson(Map<String, dynamic> json) {
     return Profile(
-      username: json['username'],
-      bio: json['bio'],
-      image: json['image'],
-      backgroundImage: json['backgroundImage'],
-      following: json['following'],
+      username: json['username']?.toString() ?? '',
+      bio: json['bio']?.toString(),
+      image: json['image']?.toString(),
+      backgroundImage: json['backgroundImage']?.toString(),
+      following: json['following'] == true,
       socialMediaLinks: (json['socialMediaLinks'] as List? ?? [])
           .map((e) => SocialMediaLink.fromJson(e))
           .toList(),

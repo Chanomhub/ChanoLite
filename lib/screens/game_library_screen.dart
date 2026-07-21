@@ -15,6 +15,10 @@ import 'package:archive/archive_io.dart';
 import 'package:chanolite/screens/rpg_maker_play_screen.dart';
 import 'package:chanolite/services/native_extractor_service.dart';
 import 'package:provider/provider.dart';
+import 'package:chanolite/extensions/context_extensions.dart';
+import 'package:chanolite/theme/app_spacing.dart';
+import 'package:chanolite/managers/library_manager.dart';
+import 'package:chanolite/widgets/account_avatar_button.dart';
 
 class GameLibraryScreen extends StatefulWidget {
   const GameLibraryScreen({super.key});
@@ -292,175 +296,58 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
 
   Future<void> _playRpgMakerNatively(BuildContext context, DownloadTask task) async {
     if (task.filePath == null) return;
-    
-    var file = File(task.filePath!);
-    if (!await file.exists()) {
-      final parentDir = file.parent;
-      if (await parentDir.exists()) {
-        // Try clean filename without the copy counters like (1), (2)
-        final cleanFileName = task.fileName?.replaceAll(RegExp(r'\s\(\d+\)'), '') ?? '';
-        final cleanFile = File('${parentDir.path}/$cleanFileName');
-        
-        if (cleanFileName.isNotEmpty && await cleanFile.exists()) {
-          file = cleanFile;
-          // Update in-memory path to the clean file
-          Provider.of<DownloadManager>(context, listen: false).updateTaskPath(task.url, cleanFile.path);
-        } else {
-          // Check if an extracted directory already exists
-          final baseName = cleanFileName.isEmpty
-              ? (task.fileName ?? '').replaceAll(RegExp(r'\s\(\d+\)'), '')
-              : cleanFileName;
-          final cleanDirName = baseName
-              .replaceAll('.zip', '')
-              .replaceAll('.7z', '')
-              .replaceAll('.rar', '');
-          final potentialDir = Directory('${parentDir.path}/$cleanDirName');
-          
-          if (cleanDirName.isNotEmpty && await potentialDir.exists()) {
-            Provider.of<DownloadManager>(context, listen: false).updateTaskPath(task.url, potentialDir.path);
-            if (context.mounted) {
-              final updatedTask = Provider.of<DownloadManager>(context, listen: false)
-                  .tasks.firstWhere((t) => t.url == task.url);
-              _playRpgMakerNatively(context, updatedTask);
-            }
-            return;
-          }
-          
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Game file not found')),
-            );
-          }
-          return;
-        }
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Game directory not found')),
-          );
-        }
-        return;
-      }
-    }
-    
-    final isZip = task.filePath!.toLowerCase().endsWith('.zip');
-    final is7z = task.filePath!.toLowerCase().endsWith('.7z');
-    final isRar = task.filePath!.toLowerCase().endsWith('.rar');
-    final isArchive = isZip || is7z || isRar;
-    
-    String gameDir = task.filePath!;
-    
-    if (isArchive) {
-      final cleanName = task.fileName
-          ?.replaceAll('.zip', '')
-          ?.replaceAll('.7z', '')
-          ?.replaceAll('.rar', '') ?? 'extracted_game';
-      
-      final parentDir = file.parent.path;
-      final potentialDir = Directory('${parentDir}/${cleanName}');
-      
-      if (await potentialDir.exists()) {
-        // Auto-detected extracted folder! Use it.
-        gameDir = potentialDir.path;
-        // Update task path in-memory so next time we launch directly
-        Provider.of<DownloadManager>(context, listen: false).updateTaskPath(task.url, gameDir);
-      } else {
-        // Need to extract archive first
-        final progressNotifier = ValueNotifier<Map<String, dynamic>>({
-          'progress': 0,
-          'file': '',
-        });
 
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) => AlertDialog(
-              title: const Text('Extracting Game Files'),
-              content: ValueListenableBuilder<Map<String, dynamic>>(
-                valueListenable: progressNotifier,
-                builder: (ctx, val, _) {
-                  final int progress = val['progress'] as int;
-                  final String fileName = val['file'] as String;
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      LinearProgressIndicator(value: progress / 100),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Progress: $progress%',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        fileName.split('/').last,
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          );
-        }
-        
-        try {
-          final targetPath = '${parentDir}/${cleanName}';
-          final success = await NativeExtractorService.extractArchive(
-            task.filePath!,
-            targetPath,
-            onProgress: (progress, fileName) {
-              progressNotifier.value = {
-                'progress': progress,
-                'file': fileName,
-              };
-            },
-          );
-          
-          if (context.mounted) {
-            Navigator.of(context).pop(); // Close extracting dialog
-          }
-          
-          if (success) {
-            gameDir = targetPath;
-            // Update task filePath so we don't have to extract again next time!
-            Provider.of<DownloadManager>(context, listen: false).updateTaskPath(task.url, targetPath);
-          } else {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Failed to extract archive natively')),
-              );
-            }
-            return;
-          }
-        } catch (e) {
-          if (context.mounted) {
-            Navigator.of(context).pop(); // Close extracting dialog
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to extract archive: $e')),
-            );
-          }
-          return;
-        }
+    final resolvedPath = await LibraryManager.resolveGamePath(
+      filePath: task.filePath!,
+      fileName: task.fileName,
+    );
+
+    if (resolvedPath == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Game file or directory not found')),
+        );
       }
+      return;
     }
-    
-    // Scan the directory to find where index.html is located
-    String? indexHtmlPath;
-    final dir = Directory(gameDir);
-    if (await dir.exists()) {
-      final List<FileSystemEntity> entities = await dir.list(recursive: true).toList();
-      for (final entity in entities) {
-        if (entity is File && entity.path.toLowerCase().endsWith('index.html')) {
-          indexHtmlPath = entity.parent.path;
-          break;
-        }
+
+    if (resolvedPath != task.filePath) {
+      Provider.of<DownloadManager>(context, listen: false)
+          .updateTaskPath(task.url, resolvedPath);
+    }
+
+    final progressNotifier = ValueNotifier<Map<String, dynamic>>({
+      'progress': 0,
+      'file': '',
+    });
+
+    final extractedDir = await LibraryManager.extractGameArchive(
+      filePath: resolvedPath,
+      fileName: task.fileName,
+      onProgress: (progress, fileName) {
+        progressNotifier.value = {
+          'progress': progress,
+          'file': fileName,
+        };
+      },
+    );
+
+    if (extractedDir == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to extract game archive')),
+        );
       }
+      return;
     }
-    
+
+    if (extractedDir != resolvedPath) {
+      Provider.of<DownloadManager>(context, listen: false)
+          .updateTaskPath(task.url, extractedDir);
+    }
+
+    final indexHtmlPath = await LibraryManager.findRpgMakerIndexHtml(extractedDir);
+
     if (indexHtmlPath == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -469,12 +356,12 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
       }
       return;
     }
-    
+
     if (context.mounted) {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => RpgMakerPlayScreen(
-            gamePath: indexHtmlPath!,
+            gamePath: indexHtmlPath,
             gameTitle: task.title ?? task.fileName ?? 'RPG Maker Game',
           ),
         ),
@@ -540,59 +427,7 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
                     ),
                   ],
                 ),
-                Consumer<AuthManager>(
-                  builder: (context, auth, _) {
-                    final theme = Theme.of(context);
-                    final user = auth.activeAccount;
-                    final hasAccounts = auth.accounts.isNotEmpty;
-                    final imageUrl = user?.image ?? '';
-                    final avatar = imageUrl.isNotEmpty
-                        ? CircleAvatar(
-                            radius: 16,
-                            backgroundImage: NetworkImage(imageUrl),
-                            backgroundColor: theme.colorScheme.primaryContainer,
-                          )
-                        : CircleAvatar(
-                            radius: 16,
-                            backgroundColor: theme.colorScheme.primaryContainer,
-                            foregroundColor: theme.colorScheme.onPrimaryContainer,
-                            child: Text(
-                              user?.username.isNotEmpty == true
-                                  ? user!.username[0].toUpperCase()
-                                  : '+',
-                            ),
-                          );
-
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(999),
-                          onTap: () {
-                            if (hasAccounts) {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                builder: (_) => const AccountSwitcherSheet(),
-                              );
-                            } else {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginScreen(),
-                                ),
-                              );
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: avatar,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                const AccountAvatarButton(),
               ],
             ),
       body: Consumer<DownloadManager>(

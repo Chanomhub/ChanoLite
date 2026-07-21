@@ -72,14 +72,6 @@ Future<void> main() async {
   
   await NotificationService.initialize();
   await LocalNotificationService.initialize();
-  await _requestNotificationPermission();
-  final fcmToken = await FirebaseMessaging.instance.getToken();
-  print('FCM Token: $fcmToken');
-
-  await FirebaseMessaging.instance.subscribeToTopic('all');
-  print('Subscribed to topic: all');
-
-
 
   final downloadManager = DownloadManager();
   await downloadManager.loadTasks();
@@ -114,51 +106,50 @@ Future<void> main() async {
   ));
 }
 
-Future<void> _requestNotificationPermission() async {
-  final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(
-    alert: true,
-    announcement: false,
-    badge: true,
-    carPlay: false,
-    criticalAlert: false,
-    provisional: false,
-    sound: true,
-  );
-}
-
 class MyApp extends StatefulWidget {
   const MyApp({
     super.key,
     required this.downloadManager,
     required this.initialLocale,
     required this.sdk,
+    this.authManager,
+    this.articleRepository,
   });
 
   final DownloadManager downloadManager;
   final Locale initialLocale;
   final ChanomhubClient sdk;
+  final AuthManager? authManager;
+  final ArticleRepository? articleRepository;
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
+  late final AuthManager _authManager;
+
   @override
   void initState() {
     super.initState();
+    _authManager = widget.authManager ?? (AuthManager(sdk: widget.sdk)..load());
+    ApiClient.onUnauthorized = _authManager.refreshSession;
     _setupInteractedMessage();
   }
 
   Future<void> _setupInteractedMessage() async {
-    RemoteMessage? initialMessage =
-        await FirebaseMessaging.instance.getInitialMessage();
+    try {
+      RemoteMessage? initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
 
-    if (initialMessage != null) {
-      _handleMessage(initialMessage);
+      if (initialMessage != null) {
+        _handleMessage(initialMessage);
+      }
+
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
+    } catch (e) {
+      debugPrint('FirebaseMessaging not initialized in test: $e');
     }
-
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
   }
 
   void _handleMessage(RemoteMessage message) {
@@ -175,15 +166,15 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final authManager = AuthManager(sdk: widget.sdk)..load();
-    ApiClient.onUnauthorized = authManager.refreshSession;
     return MultiProvider(
       providers: [
         Provider<ChanomhubClient>.value(value: widget.sdk),
         Provider<CacheService>(create: (_) => CacheService()),
-        Provider<ArticleRepository>(create: (context) => ArticleRepository(sdk: context.read<ChanomhubClient>())),
+        Provider<ArticleRepository>(
+          create: (context) => widget.articleRepository ?? ArticleRepository(sdk: context.read<ChanomhubClient>()),
+        ),
         ChangeNotifierProvider.value(value: widget.downloadManager),
-        ChangeNotifierProvider.value(value: authManager),
+        ChangeNotifierProvider.value(value: _authManager),
         ChangeNotifierProvider(create: (_) => ThemeNotifier(ThemeMode.dark)),
         ChangeNotifierProvider(create: (_) => LocaleNotifier(widget.initialLocale)),
       ],
@@ -211,6 +202,7 @@ class _MyAppState extends State<MyApp> {
             home: const AuthGate(),
             routes: {
               '/login': (_) => const LoginScreen(),
+              '/tools': (_) => const ToolsScreen(),
             },
           );
         },
