@@ -189,6 +189,9 @@ class GameToolsService {
         case 'ppsspp':
           return await _launchPPSSPP(gamePath);
 
+        case 'minhub':
+          return await _launchMinHub(gamePath);
+
         default:
           // Generic launch - just open the tool
           return await launchTool(tool);
@@ -196,6 +199,23 @@ class GameToolsService {
     } catch (e) {
       print('GameToolsService: Error launching game with tool: $e');
       return false;
+    }
+  }
+
+  /// Launch game with MinHub
+  static Future<bool> _launchMinHub(String gamePath) async {
+    try {
+      final dataUri = gamePath.startsWith('/') ? 'file://$gamePath' : gamePath;
+      final intent = AndroidIntent(
+        action: 'android.intent.action.VIEW',
+        package: 'com.minhub.gamehub',
+        data: dataUri,
+      );
+      await intent.launch();
+      return true;
+    } catch (e) {
+      print('GameToolsService: Error launching MinHub: $e');
+      return await InstalledAppsService.launchApp('com.minhub.gamehub');
     }
   }
 
