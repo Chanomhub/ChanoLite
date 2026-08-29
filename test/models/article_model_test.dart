@@ -1,5 +1,4 @@
 import 'package:chanolite/models/article_model.dart';
-import 'package:chanolite/models/download.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

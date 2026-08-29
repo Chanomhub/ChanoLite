@@ -6,14 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 class FakeIndicatorDownloadManager extends ChangeNotifier implements DownloadManager {
-  List<DownloadTask> _taskList;
+  final List<DownloadTask> _taskList;
   FakeIndicatorDownloadManager(this._taskList);
 
   @override
   List<DownloadTask> get tasks => _taskList;
-
-  @override
-  Map<String, DownloadTask> get downloads => {};
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

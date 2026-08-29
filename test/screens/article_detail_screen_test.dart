@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/models/article_model.dart';
@@ -46,9 +45,6 @@ class MockDetailArticleRepo extends Mock implements ArticleRepository {
 class FakeDownloadManager extends ChangeNotifier implements DownloadManager {
   @override
   List<DownloadTask> get tasks => [];
-
-  @override
-  Map<String, DownloadTask> get downloads => {};
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

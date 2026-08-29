@@ -10,7 +10,6 @@ import 'package:chanolite/main.dart';
 import 'package:chanolite/constants/app_config.dart';
 import 'package:chanomhub_flutter/chanomhub_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 
 import 'package:flutter/material.dart';
 import 'mock.dart';

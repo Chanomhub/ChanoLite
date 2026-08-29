@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'package:chanolite/models/article_model.dart';
 import 'package:chanolite/repositories/article_repository.dart';
 import 'package:chanolite/services/api/api_client.dart';
 import 'package:chanomhub_flutter/chanomhub_flutter.dart' hide Article, Download, User, Profile, Author;

@@ -16,9 +16,6 @@ class FakeDownloadManager extends ChangeNotifier implements DownloadManager {
   List<DownloadTask> get tasks => _taskList;
 
   @override
-  Map<String, DownloadTask> get downloads => {};
-
-  @override
   Future<void> loadTasks() async {}
 
   @override
