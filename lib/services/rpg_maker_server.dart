@@ -77,7 +77,18 @@ class RpgMakerServer {
       }
 
       final searchKey = rawPath.toLowerCase();
-      final actualFilePath = _fileCache[searchKey];
+      String? actualFilePath = _fileCache[searchKey];
+
+      // Asset extension fallback (handles MinHub-style audio/image casing & encryption extension fallback)
+      if (actualFilePath == null) {
+        if (searchKey.endsWith('.rpgmvo') || searchKey.endsWith('.m4a')) {
+          final oggKey = searchKey.replaceAll(RegExp(r'\.(rpgmvo|m4a)$'), '.ogg');
+          actualFilePath = _fileCache[oggKey];
+        } else if (searchKey.endsWith('.rpgmvp')) {
+          final pngKey = searchKey.replaceAll(RegExp(r'\.rpgmvp$'), '.png');
+          actualFilePath = _fileCache[pngKey];
+        }
+      }
 
       if (actualFilePath != null) {
         final file = File(actualFilePath);

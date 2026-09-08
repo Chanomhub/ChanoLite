@@ -230,6 +230,48 @@ class GameToolsData {
         ),
       ],
     ),
+
+    // MinHub - Multi-engine Visual Novel & RPG Game Launcher
+    GameTool(
+      id: 'minhub',
+      name: 'MinHub',
+      description: 'All-in-one Game Hub launcher & interpreter for RPG Maker (MV/MZ/XP/VX Ace), Ren\'Py, KiriKiri, Godot, and TyranoBuilder games with built-in virtual controls and cheat menu',
+      packageName: 'com.minhub.gamehub',
+      supportedEngines: [
+        'RPG Maker XP',
+        'RPG Maker VX',
+        'RPG Maker VX Ace',
+        'RPG Maker MV',
+        'RPG Maker MZ',
+        'RPGM',
+        'RPGMV',
+        'RPGMZ',
+        'Ren\'Py',
+        'RenPy',
+        'Renpy',
+        'Kirikiri',
+        'KAG',
+        'Kirikiri2',
+        'xp3',
+        'Godot',
+        'TyranoBuilder',
+        'TyranoScript',
+        'Tyrano',
+        'HTML',
+      ],
+      downloadSources: [
+        ToolDownloadSource(
+          name: 'Patreon / Official Website',
+          url: 'https://h-game18.xyz/',
+          type: SourceType.website,
+        ),
+        ToolDownloadSource(
+          name: 'Direct APK Download',
+          url: 'https://github.com/Chanomhub/ChanoLite',
+          type: SourceType.apk,
+        ),
+      ],
+    ),
   ];
 
   /// Get all main tools (not plugins)

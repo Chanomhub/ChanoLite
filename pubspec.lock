@@ -191,7 +191,7 @@ packages:
       path: "../sdks/flutter"
       relative: true
     source: path
-    version: "1.0.3"
+    version: "1.0.4"
   characters:
     dependency: transitive
     description:

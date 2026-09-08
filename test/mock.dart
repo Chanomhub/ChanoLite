@@ -80,9 +80,6 @@ class MockDownloadManager extends Mock implements DownloadManager {
   List<DownloadTask> get tasks => [];
 
   @override
-  Map<String, DownloadTask> get downloads => {};
-
-  @override
   void onDownloadComplete(Function(DownloadTask) callback) {}
 }
 
