@@ -192,6 +192,12 @@ class GameToolsService {
         case 'minhub':
           return await _launchMinHub(gamePath);
 
+        case 'mtool':
+        case 'mtool-mkxpz':
+        case 'mtool-renpy':
+        case 'mtool-easyrpg':
+          return await _launchMTool(gamePath);
+
         default:
           // Generic launch - just open the tool
           return await launchTool(tool);
@@ -199,6 +205,27 @@ class GameToolsService {
     } catch (e) {
       print('GameToolsService: Error launching game with tool: $e');
       return false;
+    }
+  }
+
+  /// Launch game with MTool Mobile
+  static Future<bool> _launchMTool(String gamePath) async {
+    try {
+      final dataUri = gamePath.startsWith('/') ? 'file://$gamePath' : gamePath;
+      final intent = AndroidIntent(
+        action: 'android.intent.action.MAIN',
+        package: 'app.mtool.mtoolmobile',
+        componentName: 'app.mtool.mtoolmobile.StartActivity',
+        data: dataUri,
+        arguments: <String, dynamic>{
+          'gamePath': gamePath,
+        },
+      );
+      await intent.launch();
+      return true;
+    } catch (e) {
+      print('GameToolsService: Error launching MTool: $e');
+      return await InstalledAppsService.launchApp('app.mtool.mtoolmobile');
     }
   }
 

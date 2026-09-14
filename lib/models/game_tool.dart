@@ -43,6 +43,7 @@ class GameTool {
   final List<ToolDownloadSource> downloadSources;
   final bool isPlugin; // If true, requires parent tool (e.g., JoiPlay)
   final String? parentToolId; // Parent tool ID if this is a plugin
+  final String? testedVersion; // Version tested for compatibility verification
 
   const GameTool({
     required this.id,
@@ -54,6 +55,7 @@ class GameTool {
     required this.downloadSources,
     this.isPlugin = false,
     this.parentToolId,
+    this.testedVersion,
   });
 
   /// Check if this tool supports a specific engine

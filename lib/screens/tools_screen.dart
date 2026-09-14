@@ -135,10 +135,32 @@ class _ToolsScreenState extends State<ToolsScreen> {
                 _buildStatusChip(context, isInstalled),
               ],
             ),
-            subtitle: Text(
-              tool.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tool.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (tool.testedVersion != null) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryContainer.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Tested on: ${tool.testedVersion}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSecondaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
 
@@ -228,6 +250,16 @@ class _ToolsScreenState extends State<ToolsScreen> {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+          if (plugin.testedVersion != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              'Tested: ${plugin.testedVersion}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontSize: 10,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Wrap(
             spacing: 6,
@@ -320,6 +352,8 @@ class _ToolsScreenState extends State<ToolsScreen> {
         return Icons.gamepad;
       case 'exagear':
         return Icons.computer;
+      case 'mtool':
+        return Icons.auto_fix_high;
       default:
         return Icons.extension;
     }

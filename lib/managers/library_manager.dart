@@ -102,4 +102,45 @@ class LibraryManager {
     }
     return null;
   }
+
+  /// Scans the directory to find a main game executable/entry file (e.g. index.html, Game.exe, *.exe, *.py).
+  static Future<String?> findGameExecutable(String gameDir) async {
+    final dir = Directory(gameDir);
+    if (!await dir.exists()) return null;
+
+    try {
+      final List<FileSystemEntity> entities = await dir.list(recursive: true).toList();
+
+      // 1. Check for index.html (RPG Maker MV/MZ, Tyrano, HTML5)
+      for (final entity in entities) {
+        if (entity is File && entity.path.toLowerCase().endsWith('index.html')) {
+          return entity.path;
+        }
+      }
+
+      // 2. Check for Game.exe
+      for (final entity in entities) {
+        if (entity is File && entity.path.toLowerCase().endsWith('/game.exe')) {
+          return entity.path;
+        }
+      }
+
+      // 3. Check for any .exe
+      for (final entity in entities) {
+        if (entity is File && entity.path.toLowerCase().endsWith('.exe')) {
+          return entity.path;
+        }
+      }
+
+      // 4. Check for .py or .sh
+      for (final entity in entities) {
+        if (entity is File &&
+            (entity.path.toLowerCase().endsWith('.py') ||
+             entity.path.toLowerCase().endsWith('.sh'))) {
+          return entity.path;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
 }

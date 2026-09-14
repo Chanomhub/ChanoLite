@@ -12,7 +12,6 @@ import 'package:chanolite/widgets/tool_selection_dialog.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:archive/archive_io.dart';
-import 'package:chanolite/screens/rpg_maker_play_screen.dart';
 import 'package:chanolite/services/native_extractor_service.dart';
 import 'package:provider/provider.dart';
 import 'package:chanolite/extensions/context_extensions.dart';
@@ -98,28 +97,12 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
                   }
                 },
               ),
-            // Built-in RPG Maker Play Option
-            if (task.status == DownloadTaskStatus.complete && !isApk && 
-                (task.engine?.toLowerCase() == 'rpgm' || 
-                 task.engine?.toLowerCase() == 'rpg-maker' || 
-                 task.engine?.toLowerCase() == 'rpg maker' ||
-                 task.fileName?.toLowerCase().contains('rpgm') == true ||
-                 task.fileName?.toLowerCase().contains('rpgmaker') == true))
-              ListTile(
-                leading: const Icon(Icons.play_circle_fill, color: Colors.green),
-                title: const Text('Play Natively (Built-in Player)'),
-                subtitle: const Text('Direct launch RPG Maker MV/MZ'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _playRpgMakerNatively(context, task);
-                },
-              ),
-            // Play with Tool option (for games with engine info)
-            if (task.status == DownloadTaskStatus.complete && hasEngine && !isApk)
+            // Play with Tool option (for games with engine info or recognized game files)
+            if (task.status == DownloadTaskStatus.complete && !isApk && (hasEngine || _isRecognizedGame(task)))
               ListTile(
                 leading: const Icon(Icons.sports_esports),
                 title: const Text('Play with Tool'),
-                subtitle: Text('Engine: ${task.engine}'),
+                subtitle: Text('Engine: ${_getEffectiveEngine(task)}'),
                 onTap: () async {
                   Navigator.of(context).pop();
                   await _playWithTool(context, task);
@@ -242,60 +225,24 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
     );
   }
 
-  Future<void> _playWithTool(BuildContext context, DownloadTask task) async {
-    if (task.engine == null || task.filePath == null) return;
-
-    // Get installed tools for this engine
-    final installedTools = await GameToolsService.getInstalledToolsForEngine(task.engine!);
-
-    if (!context.mounted) return;
-
-    if (installedTools.isEmpty) {
-      // No tools installed - show message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No tools installed for ${task.engine} games'),
-          action: SnackBarAction(
-            label: 'Get Tools',
-            onPressed: () {
-              // Navigate to tools tab (index 3)
-              // Find MainScreen's state and update tab
-            },
-          ),
-        ),
-      );
-      return;
-    }
-
-    bool success;
-    if (installedTools.length == 1) {
-      // Only one tool - launch directly
-      success = await GameToolsService.launchGameWithTool(installedTools.first, task.filePath!);
-    } else {
-      // Multiple tools - show selection dialog
-      final selectedTool = await ToolSelectionDialog.show(
-        context,
-        tools: installedTools,
-        gamePath: task.filePath,
-        engineName: task.engine,
-      );
-
-      if (selectedTool != null) {
-        success = await GameToolsService.launchGameWithTool(selectedTool, task.filePath!);
-      } else {
-        return; // User cancelled
-      }
-    }
-
-    if (!success && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to launch game with tool')),
-      );
-    }
+  bool _isRecognizedGame(DownloadTask task) {
+    final name = (task.fileName ?? '').toLowerCase();
+    return name.contains('rpgm') || name.contains('rpgmaker') || name.contains('renpy');
   }
 
-  Future<void> _playRpgMakerNatively(BuildContext context, DownloadTask task) async {
+  String _getEffectiveEngine(DownloadTask task) {
+    if (task.engine != null && task.engine!.isNotEmpty) {
+      return task.engine!;
+    }
+    final name = (task.fileName ?? '').toLowerCase();
+    if (name.contains('rpgm') || name.contains('rpgmaker')) return 'RPG Maker';
+    if (name.contains('renpy')) return 'Ren\'Py';
+    return 'HTML';
+  }
+
+  Future<void> _playWithTool(BuildContext context, DownloadTask task) async {
     if (task.filePath == null) return;
+    final engine = _getEffectiveEngine(task);
 
     final resolvedPath = await LibraryManager.resolveGamePath(
       filePath: task.filePath!,
@@ -316,55 +263,81 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
           .updateTaskPath(task.url, resolvedPath);
     }
 
-    final progressNotifier = ValueNotifier<Map<String, dynamic>>({
-      'progress': 0,
-      'file': '',
-    });
+    String launchTarget = resolvedPath;
+    final isArchive = resolvedPath.toLowerCase().endsWith('.zip') ||
+        resolvedPath.toLowerCase().endsWith('.7z') ||
+        resolvedPath.toLowerCase().endsWith('.rar');
 
-    final extractedDir = await LibraryManager.extractGameArchive(
-      filePath: resolvedPath,
-      fileName: task.fileName,
-      onProgress: (progress, fileName) {
-        progressNotifier.value = {
-          'progress': progress,
-          'file': fileName,
-        };
-      },
-    );
-
-    if (extractedDir == null) {
+    if (isArchive) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to extract game archive')),
+          const SnackBar(content: Text('Extracting game archive...')),
         );
       }
-      return;
-    }
-
-    if (extractedDir != resolvedPath) {
-      Provider.of<DownloadManager>(context, listen: false)
-          .updateTaskPath(task.url, extractedDir);
-    }
-
-    final indexHtmlPath = await LibraryManager.findRpgMakerIndexHtml(extractedDir);
-
-    if (indexHtmlPath == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not find index.html. Is this an HTML5 RPG Maker game?')),
-        );
+      final extractedDir = await LibraryManager.extractGameArchive(
+        filePath: resolvedPath,
+        fileName: task.fileName,
+        onProgress: (_, __) {},
+      );
+      if (extractedDir != null) {
+        launchTarget = extractedDir;
+        if (context.mounted) {
+          Provider.of<DownloadManager>(context, listen: false)
+              .updateTaskPath(task.url, extractedDir);
+        }
       }
-      return;
     }
 
-    if (context.mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => RpgMakerPlayScreen(
-            gamePath: indexHtmlPath,
-            gameTitle: task.title ?? task.fileName ?? 'RPG Maker Game',
+    // Locate the game executable (e.g. index.html or Game.exe) for tools like JoiPlay
+    final executableFile = await LibraryManager.findGameExecutable(launchTarget);
+    if (executableFile != null) {
+      launchTarget = executableFile;
+    }
+
+    // Get installed tools for this engine
+    final installedTools = await GameToolsService.getInstalledToolsForEngine(engine);
+
+    if (!context.mounted) return;
+
+    if (installedTools.isEmpty) {
+      // No tools installed - show message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No tools installed for $engine games'),
+          action: SnackBarAction(
+            label: 'Get Tools',
+            onPressed: () {
+              // Navigate to tools tab (index 3)
+            },
           ),
         ),
+      );
+      return;
+    }
+
+    bool success;
+    if (installedTools.length == 1) {
+      // Only one tool - launch directly
+      success = await GameToolsService.launchGameWithTool(installedTools.first, launchTarget);
+    } else {
+      // Multiple tools - show selection dialog
+      final selectedTool = await ToolSelectionDialog.show(
+        context,
+        tools: installedTools,
+        gamePath: launchTarget,
+        engineName: engine,
+      );
+
+      if (selectedTool != null) {
+        success = await GameToolsService.launchGameWithTool(selectedTool, launchTarget);
+      } else {
+        return; // User cancelled
+      }
+    }
+
+    if (!success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to launch game with tool')),
       );
     }
   }
