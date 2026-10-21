@@ -1,10 +1,37 @@
 {
     "@@locale": "zh",
-    "helloWorld": "你好，世界！",
+    "helloWorld": "你好世界！",
     "settings": "设置",
     "language": "语言",
     "english": "英语",
     "thai": "泰语",
     "japanese": "日语",
-    "chinese": "中文"
+    "chinese": "中文",
+    "comments": "评论",
+    "noComments": "暂无评论",
+    "beTheFirstToComment": "来抢沙发吧！",
+    "writeComment": "写下你的评论...",
+    "reply": "回复",
+    "replyingTo": "回复 @{username}",
+    "@replyingTo": {
+      "placeholders": {
+        "username": {
+          "type": "String"
+        }
+      }
+    },
+    "cancelReply": "取消回复",
+    "send": "发送",
+    "deleteComment": "删除评论",
+    "deleteCommentConfirm": "确定要删除这条评论吗？",
+    "delete": "删除",
+    "cancel": "取消",
+    "loginToComment": "登录后参与评论",
+    "login": "登录",
+    "commentPosted": "评论发表成功",
+    "commentDeleted": "评论已删除",
+    "failedToLoadComments": "加载评论失败",
+    "failedToPostComment": "发表评论失败",
+    "failedToDeleteComment": "删除评论失败",
+    "retry": "重试"
 }

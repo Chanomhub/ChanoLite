@@ -13,16 +13,17 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:chanolite/services/cache_service.dart';
-import 'package:chanolite/services/local_notification_service.dart';
 import 'package:chanolite/models/article_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:ui';
+import 'package:chanolite/services/api/comment_service.dart';
+import 'package:chanolite/widgets/comment_section_widget.dart';
 
 
 class ArticleDetailScreen extends StatefulWidget {
   final int articleId;
+  final CommentService? commentService;
 
-  const ArticleDetailScreen({super.key, required this.articleId});
+  const ArticleDetailScreen({super.key, required this.articleId, this.commentService});
 
   @override
   State<ArticleDetailScreen> createState() => _ArticleDetailScreenState();
@@ -166,6 +167,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                     const SizedBox(height: 32),
                   ],
                   _buildInfoTable(context, _article),
+                  if (_article.slug != null && _article.slug!.isNotEmpty) ...[
+                    const SizedBox(height: 32),
+                    ArticleCommentsSection(
+                      slug: _article.slug!,
+                      articleAuthor: _article.author?.name,
+                      commentService: widget.commentService,
+                    ),
+                  ],
                   const SizedBox(height: 80), // Bottom padding for FAB or just spacing
                 ],
               ),

@@ -6,5 +6,32 @@
     "english": "อังกฤษ",
     "thai": "ไทย",
     "japanese": "ญี่ปุ่น",
-    "chinese": "จีน"
+    "chinese": "จีน",
+    "comments": "ความคิดเห็น",
+    "noComments": "ยังไม่มีความคิดเห็น",
+    "beTheFirstToComment": "เป็นคนแรกที่แสดงความคิดเห็น!",
+    "writeComment": "เขียนความคิดเห็น...",
+    "reply": "ตอบกลับ",
+    "replyingTo": "ตอบกลับ @{username}",
+    "@replyingTo": {
+      "placeholders": {
+        "username": {
+          "type": "String"
+        }
+      }
+    },
+    "cancelReply": "ยกเลิกการตอบกลับ",
+    "send": "ส่ง",
+    "deleteComment": "ลบความคิดเห็น",
+    "deleteCommentConfirm": "คุณแน่ใจหรือไม่ว่าต้องการลบความคิดเห็นนี้?",
+    "delete": "ลบ",
+    "cancel": "ยกเลิก",
+    "loginToComment": "เข้าสู่ระบบเพื่อแสดงความคิดเห็น",
+    "login": "เข้าสู่ระบบ",
+    "commentPosted": "ส่งความคิดเห็นสำเร็จ",
+    "commentDeleted": "ลบความคิดเห็นแล้ว",
+    "failedToLoadComments": "โหลดความคิดเห็นไม่สำเร็จ",
+    "failedToPostComment": "ส่งความคิดเห็นไม่สำเร็จ",
+    "failedToDeleteComment": "ลบความคิดเห็นไม่สำเร็จ",
+    "retry": "ลองใหม่"
 }

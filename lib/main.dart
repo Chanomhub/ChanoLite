@@ -28,6 +28,7 @@ import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/services/game_tools_service.dart';
 import 'package:chanolite/screens/article_detail_screen.dart';
 import 'package:chanolite/repositories/article_repository.dart';
+import 'package:chanolite/services/api/comment_service.dart';
 import 'package:chanomhub_flutter/chanomhub_flutter.dart';
 import 'package:chanolite/constants/app_config.dart';
 import 'package:chanolite/theme/locale_notifier.dart';
@@ -114,6 +115,7 @@ class MyApp extends StatefulWidget {
     required this.sdk,
     this.authManager,
     this.articleRepository,
+    this.commentService,
   });
 
   final DownloadManager downloadManager;
@@ -121,6 +123,7 @@ class MyApp extends StatefulWidget {
   final ChanomhubClient sdk;
   final AuthManager? authManager;
   final ArticleRepository? articleRepository;
+  final CommentService? commentService;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -172,6 +175,9 @@ class _MyAppState extends State<MyApp> {
         Provider<CacheService>(create: (_) => CacheService()),
         Provider<ArticleRepository>(
           create: (context) => widget.articleRepository ?? ArticleRepository(sdk: context.read<ChanomhubClient>()),
+        ),
+        Provider<CommentService>(
+          create: (_) => widget.commentService ?? CommentService(),
         ),
         ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: _authManager),

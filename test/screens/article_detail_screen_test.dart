@@ -1,10 +1,12 @@
 import 'package:chanolite/managers/auth_manager.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/models/article_model.dart';
+import 'package:chanolite/models/comment_model.dart';
 import 'package:chanolite/models/download.dart';
 import 'package:chanolite/models/download_task.dart';
 import 'package:chanolite/repositories/article_repository.dart';
 import 'package:chanolite/screens/article_detail_screen.dart';
+import 'package:chanolite/services/api/comment_service.dart';
 import 'package:chanolite/services/cache_service.dart';
 import 'package:chanolite/theme/locale_notifier.dart';
 import 'package:chanomhub_flutter/chanomhub_flutter.dart' hide Article, Download, User, Profile, Author;
@@ -15,10 +17,15 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockDetailArticleRepo extends Mock implements ArticleRepository {
+  final String? slug;
+
+  MockDetailArticleRepo({this.slug});
+
   @override
   Future<Article> getArticleById(int id, {Locale? language}) async {
     return Article(
       id: id,
+      slug: slug,
       title: 'Detailed RPG Adventure',
       description: 'An epic story-driven game',
       body: '<p>Complete storyline description</p>',
@@ -38,6 +45,23 @@ class MockDetailArticleRepo extends Mock implements ArticleRepository {
           vipOnly: false,
         )
       ],
+    );
+  }
+}
+
+class FakeCommentService extends CommentService {
+  @override
+  Future<CommentsResponse> getComments(String slug, {int page = 1, int limit = 50}) async {
+    return CommentsResponse(
+      comments: [
+        Comment(
+          id: 1,
+          body: 'Awesome article comment!',
+          createdAt: DateTime.now(),
+          author: CommentAuthor(username: 'rpg_fan'),
+        ),
+      ],
+      commentsCount: 1,
     );
   }
 }
@@ -80,5 +104,42 @@ void main() {
 
     expect(find.text('Detailed RPG Adventure'), findsOneWidget);
     expect(find.text('Game v1.0.apk'), findsOneWidget);
+  });
+
+  testWidgets('ArticleDetailScreen renders comments section when slug is present', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final sdk = ChanomhubClient(baseUrl: 'http://localhost', cdnUrl: '');
+    final authManager = AuthManager(sdk: sdk);
+    final articleRepo = MockDetailArticleRepo(slug: 'detailed-rpg-adventure');
+    final commentService = FakeCommentService();
+    final cacheService = CacheService();
+    final localeNotifier = LocaleNotifier(const Locale('en'));
+    final downloadManager = FakeDownloadManager();
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<CacheService>.value(value: cacheService),
+          Provider<ArticleRepository>.value(value: articleRepo),
+          Provider<CommentService>.value(value: commentService),
+          ChangeNotifierProvider<AuthManager>.value(value: authManager),
+          ChangeNotifierProvider<LocaleNotifier>.value(value: localeNotifier),
+          ChangeNotifierProvider<DownloadManager>.value(value: downloadManager),
+        ],
+        child: MaterialApp(
+          home: ArticleDetailScreen(
+            articleId: 1,
+            commentService: commentService,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Comments'), findsOneWidget);
+    expect(find.text('Awesome article comment!'), findsOneWidget);
+    expect(find.text('rpg_fan'), findsOneWidget);
   });
 }

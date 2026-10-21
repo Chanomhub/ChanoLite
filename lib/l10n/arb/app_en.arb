@@ -9,5 +9,32 @@
     "english": "English",
     "thai": "Thai",
     "japanese": "Japanese",
-    "chinese": "Chinese"
+    "chinese": "Chinese",
+    "comments": "Comments",
+    "noComments": "No comments yet",
+    "beTheFirstToComment": "Be the first to share your thoughts!",
+    "writeComment": "Write a comment...",
+    "reply": "Reply",
+    "replyingTo": "Replying to @{username}",
+    "@replyingTo": {
+      "placeholders": {
+        "username": {
+          "type": "String"
+        }
+      }
+    },
+    "cancelReply": "Cancel reply",
+    "send": "Send",
+    "deleteComment": "Delete comment",
+    "deleteCommentConfirm": "Are you sure you want to delete this comment?",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "loginToComment": "Log in to join the conversation",
+    "login": "Log In",
+    "commentPosted": "Comment posted successfully",
+    "commentDeleted": "Comment deleted successfully",
+    "failedToLoadComments": "Failed to load comments",
+    "failedToPostComment": "Failed to post comment",
+    "failedToDeleteComment": "Failed to delete comment",
+    "retry": "Retry"
 }

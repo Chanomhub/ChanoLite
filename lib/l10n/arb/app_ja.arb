@@ -6,5 +6,32 @@
     "english": "英語",
     "thai": "タイ語",
     "japanese": "日本語",
-    "chinese": "中国語"
+    "chinese": "中国語",
+    "comments": "コメント",
+    "noComments": "まだコメントはありません",
+    "beTheFirstToComment": "最初のコメントを投稿しましょう！",
+    "writeComment": "コメントを入力...",
+    "reply": "返信",
+    "replyingTo": "@{username} に返信中",
+    "@replyingTo": {
+      "placeholders": {
+        "username": {
+          "type": "String"
+        }
+      }
+    },
+    "cancelReply": "返信をキャンセル",
+    "send": "送信",
+    "deleteComment": "コメントを削除",
+    "deleteCommentConfirm": "このコメントを削除してもよろしいですか？",
+    "delete": "削除",
+    "cancel": "キャンセル",
+    "loginToComment": "コメントを投稿するにはログインしてください",
+    "login": "ログイン",
+    "commentPosted": "コメントを投稿しました",
+    "commentDeleted": "コメントを削除しました",
+    "failedToLoadComments": "コメントの読み込みに失敗しました",
+    "failedToPostComment": "コメントの投稿に失敗しました",
+    "failedToDeleteComment": "コメントの削除に失敗しました",
+    "retry": "再試行"
 }
