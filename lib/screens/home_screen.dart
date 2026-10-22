@@ -19,6 +19,7 @@ import 'package:chanolite/widgets/home/top_rated_item.dart';
 import 'package:chanolite/extensions/context_extensions.dart';
 import 'package:chanolite/theme/app_spacing.dart';
 import 'package:chanolite/widgets/account_avatar_button.dart';
+import 'package:chanolite/widgets/notification_bell_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -151,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: const [
+          NotificationBellButton(),
           AccountAvatarButton(),
         ],
       ),

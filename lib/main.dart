@@ -11,6 +11,7 @@ import 'package:chanolite/screens/game_library_screen.dart';
 import 'package:chanolite/screens/home_screen.dart';
 
 import 'package:chanolite/managers/auth_manager.dart';
+import 'package:chanolite/managers/notification_manager.dart';
 import 'package:chanolite/services/api/api_client.dart';
 import 'package:chanolite/managers/download_manager.dart';
 import 'package:chanolite/screens/login_screen.dart';
@@ -181,6 +182,9 @@ class _MyAppState extends State<MyApp> {
         ),
         ChangeNotifierProvider.value(value: widget.downloadManager),
         ChangeNotifierProvider.value(value: _authManager),
+        ChangeNotifierProvider<NotificationManager>(
+          create: (_) => NotificationManager(),
+        ),
         ChangeNotifierProvider(create: (_) => ThemeNotifier(ThemeMode.dark)),
         ChangeNotifierProvider(create: (_) => LocaleNotifier(widget.initialLocale)),
       ],
