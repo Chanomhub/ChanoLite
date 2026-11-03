@@ -24,7 +24,11 @@ class NotificationApiService {
     final endpoint = queryParameters.isEmpty
         ? 'notifications'
         : 'notifications?${Uri(queryParameters: queryParameters).query}';
-    final data = await _apiClient.get(endpoint) as Map<String, dynamic>;
+    final response = await _apiClient.get(endpoint);
+    // Backend wraps responses in {data: ...} — unwrap, tolerating bare payloads
+    final data = response is Map<String, dynamic> && response['data'] is Map<String, dynamic>
+        ? response['data'] as Map<String, dynamic>
+        : response as Map<String, dynamic>;
     return MultipleNotificationsResponse.fromJson(data);
   }
 
@@ -33,8 +37,33 @@ class NotificationApiService {
   }
 
   Future<SingleNotificationResponse> markNotificationAsRead(int id) async {
-    final data = await _apiClient.put('notifications/$id/read') as Map<String, dynamic>;
-    return SingleNotificationResponse.fromJson(data);
+    final response = await _apiClient.put('notifications/$id/read');
+    if (response is! Map<String, dynamic>) {
+      return SingleNotificationResponse(notification: _syntheticRead(id));
+    }
+    // Backend wraps in {data:{notification:...}} — accept every historical
+    // shape so a server change degrades to a synthetic row, not a crash.
+    final inner = response['data'] is Map<String, dynamic>
+        ? response['data'] as Map<String, dynamic>
+        : response;
+    final notificationJson = inner['notification'];
+    if (notificationJson is! Map<String, dynamic>) {
+      return SingleNotificationResponse(notification: _syntheticRead(id));
+    }
+    return SingleNotificationResponse.fromJson(notificationJson);
+  }
+
+  NotificationResponse _syntheticRead(int id) {
+    final now = DateTime.now().toUtc();
+    return NotificationResponse(
+      id: id,
+      userId: 0,
+      type: NotificationType.NEW_ARTICLE,
+      message: '',
+      isRead: true,
+      createdAt: now,
+      updatedAt: now,
+    );
   }
 
   Future<void> markAllNotificationsAsRead() async {

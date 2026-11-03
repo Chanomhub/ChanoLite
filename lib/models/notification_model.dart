@@ -71,8 +71,9 @@ class MultipleNotificationsResponse {
       notifications: (json['notifications'] as List)
           .map((notification) => NotificationResponse.fromJson(notification))
           .toList(),
-      notificationsCount: json['notificationsCount'],
-      unreadCount: json['unreadCount'],
+      // Backend field is totalCount; notificationsCount kept for older payloads
+      notificationsCount: (json['notificationsCount'] ?? json['totalCount'] ?? 0) as int,
+      unreadCount: (json['unreadCount'] ?? 0) as int,
     );
   }
 }
