@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:path/path.dart' as p;
 import '../constants/game_tools_data.dart';
 import '../models/game_tool.dart';
 import 'installed_apps_service.dart';
@@ -8,9 +9,46 @@ import '../managers/download_manager.dart';
 
 import 'game_tools_catalog.dart';
 
+/// The Neko RPGXP activity an intent should target, or [isOpenApp] to just
+/// launch the player and let the user pick the game manually.
+class NekoLaunchTarget {
+  final String action;
+  final String? componentName;
+
+  const NekoLaunchTarget({required this.action, this.componentName});
+
+  /// No launchable layout found — open the app instead.
+  const NekoLaunchTarget.openApp() : this(action: 'net.kernys.rgss.OPEN_APP');
+
+  bool get isOpenApp => componentName == null;
+}
+
 /// Service for managing game tools
 class GameToolsService {
   GameToolsService._();
+
+  /// Which Neko RPGXP activity should receive the launch intent.
+  /// Mirrors GameManager.parseGameInfo from net.kernys.rgss v2.01.
+  static NekoLaunchTarget resolveNekoTarget({
+    required bool hasPackageJson,
+    required bool hasWwwIndexHtml,
+    required bool hasGameIni,
+    required bool hasGameExe,
+  }) {
+    if (hasPackageJson && hasWwwIndexHtml) {
+      return const NekoLaunchTarget(
+        action: 'net.kernys.rgss.RUN_GAME_MV',
+        componentName: 'net.kernys.rgss.MVGameActivity',
+      );
+    }
+    if (hasGameIni && hasGameExe) {
+      return const NekoLaunchTarget(
+        action: 'net.kernys.rgss.RUN_GAME',
+        componentName: 'net.kernys.rgss.SDLActivity',
+      );
+    }
+    return const NekoLaunchTarget.openApp();
+  }
 
   /// Start downloading Proton directly using the provided DownloadManager
   static Future<void> startProtonDownload(DownloadManager downloadManager) async {
@@ -198,6 +236,9 @@ class GameToolsService {
         case 'mtool-easyrpg':
           return await _launchMTool(gamePath);
 
+        case 'neko-rpgxp':
+          return await _launchNekoRpgxp(gamePath);
+
         default:
           // Generic launch - just open the tool
           return await launchTool(tool);
@@ -205,6 +246,48 @@ class GameToolsService {
     } catch (e) {
       print('GameToolsService: Error launching game with tool: $e');
       return false;
+    }
+  }
+
+  /// Launch game with Neko RPGXP Player.
+  ///
+  /// Reverse-engineered from net.kernys.rgss v2.01 (jadx): MainActivity
+  /// re-dispatches `RUN_GAME` intents, SDLActivity (XP/VX/VA, needs Game.exe +
+  /// Game.ini) and MVGameActivity (MV, needs package.json + www/index.html)
+  /// read the `gamePath` extra; `gamePackageID` is used for resume checks and
+  /// `gameName` for the MV title bar.
+  /// Maldives Player and Winlator expose no exported game activity — they can
+  /// only be opened at app level (generic branch above).
+  static Future<bool> _launchNekoRpgxp(String gamePath) async {
+    const package = 'net.kernys.rgss';
+    try {
+      final dir = Directory(gamePath);
+      final target = GameToolsService.resolveNekoTarget(
+        hasPackageJson: File('${dir.path}/package.json').existsSync(),
+        hasWwwIndexHtml: File('${dir.path}/www/index.html').existsSync(),
+        hasGameIni: File('${dir.path}/Game.ini').existsSync(),
+        hasGameExe: File('${dir.path}/Game.exe').existsSync(),
+      );
+      if (target.isOpenApp) {
+        // Game layout Neko cannot parse — let the user pick it manually.
+        return await InstalledAppsService.launchApp(package);
+      }
+      final intent = AndroidIntent(
+        action: target.action,
+        package: package,
+        componentName: target.componentName,
+        arguments: <String, dynamic>{
+          'gamePath': gamePath,
+          'gameName': p.basename(p.normalize(gamePath)),
+          'gamePackageID':
+              'chanolite_${p.basename(p.normalize(gamePath)).hashCode.abs()}',
+        },
+      );
+      await intent.launch();
+      return true;
+    } catch (e) {
+      print('GameToolsService: Error launching Neko RPGXP: $e');
+      return await InstalledAppsService.launchApp(package);
     }
   }
 
