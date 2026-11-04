@@ -110,25 +110,14 @@ class GameToolsService {
     }
   }
 
-  /// Launch game with MTool Mobile
+  /// Launch game with MTool Mobile.
+  ///
+  /// Verified from app.mtool.mtoolmobile v59 (jadx + runtime blob):
+  /// StartActivity/MainActivity never read intent data or extras — games are
+  /// scanned from /storage/emulated/0/MTool/Games only, so launching can only
+  /// open the app; the user picks the game inside it.
   static Future<bool> _launchMTool(String gamePath) async {
-    try {
-      final dataUri = gamePath.startsWith('/') ? 'file://$gamePath' : gamePath;
-      final intent = AndroidIntent(
-        action: 'android.intent.action.MAIN',
-        package: 'app.mtool.mtoolmobile',
-        componentName: 'app.mtool.mtoolmobile.StartActivity',
-        data: dataUri,
-        arguments: <String, dynamic>{
-          'gamePath': gamePath,
-        },
-      );
-      await intent.launch();
-      return true;
-    } catch (e) {
-      print('GameToolsService: Error launching MTool: $e');
-      return await InstalledAppsService.launchApp('app.mtool.mtoolmobile');
-    }
+    return await InstalledAppsService.launchApp('app.mtool.mtoolmobile');
   }
 
   /// Launch game with MinHub.
@@ -170,20 +159,14 @@ class GameToolsService {
     }
   }
 
-  /// Launch game with Kirikiroid2
+  /// Launch game with Kirikiroid2.
+  ///
+  /// Its manifest (1.3.9 GitHub build, package org.tvp.kirikiri2_free_10309)
+  /// exports only the MAIN/LAUNCHER filter — no VIEW/data filter — and
+  /// KR2Activity never reads launch intents: the game is picked in-app via
+  /// its file browser (games are .xp3 archives / folders).
   static Future<bool> _launchKirikiroid2(String gamePath) async {
-    try {
-      final intent = AndroidIntent(
-        action: 'android.intent.action.VIEW',
-        package: 'org.tvp.kirikiri2',
-        data: 'file://$gamePath',
-      );
-      await intent.launch();
-      return true;
-    } catch (e) {
-      print('GameToolsService: Error launching Kirikiroid2: $e');
-      return await InstalledAppsService.launchApp('org.tvp.kirikiri2');
-    }
+    return await InstalledAppsService.launchApp('org.tvp.kirikiri2');
   }
 
   /// Get installation status for all tools
