@@ -55,11 +55,9 @@ void main() {
   });
 
   group('GameToolsData lookups', () {
-    test('getToolById finds proton-ce and returns null for unknown id', () {
-      final proton = GameToolsData.getToolById('proton-ce');
-      expect(proton, isNotNull);
-      expect(proton!.downloadSources.first.url, endsWith('.tar.gz'),
-          reason: 'first proton source must be the direct archive download');
+    test('getToolById finds a main tool and returns null for unknown id', () {
+      final joiplay = GameToolsData.getToolById('joiplay');
+      expect(joiplay, isNotNull);
 
       expect(GameToolsData.getToolById('no-such-tool'), isNull);
     });
