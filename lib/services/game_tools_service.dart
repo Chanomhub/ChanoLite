@@ -88,7 +88,7 @@ class GameToolsService {
         case 'joiplay-tyrano':
           return await _launchJoiPlay(gamePath);
 
-        case 'minhub':
+        case 'gamehub':
           return await _launchMinHub(gamePath);
 
         case 'mtool':
@@ -117,13 +117,13 @@ class GameToolsService {
     return await InstalledAppsService.launchApp('app.mtool.mtoolmobile');
   }
 
-  /// Launch game with MinHub.
+  /// Launch game with GameHub (GameSir/XiaoJi).
   ///
-  /// Its manifest (com.minhub.gamehub v0.9.9) exports no generic file/content
-  /// VIEW filter — only minhub://game and patreon-callback deep links — so an
-  /// ACTION_VIEW file:// intent can never resolve; open the app directly.
+  /// Its manifest (com.xiaoji.egggame v6.3.2) exports only the launcher and
+  /// community deep links (gamehub://home, gamesir://gamehub, ...) — no file
+  /// VIEW filter — so games are always imported/launched inside the app.
   static Future<bool> _launchMinHub(String gamePath) async {
-    return await InstalledAppsService.launchApp('com.minhub.gamehub');
+    return await InstalledAppsService.launchApp('com.xiaoji.egggame');
   }
 
   /// Launch game with JoiPlay.

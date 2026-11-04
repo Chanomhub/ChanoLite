@@ -328,7 +328,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
     switch (toolId) {
       case 'joiplay':
         return Icons.sports_esports;
-      case 'minhub':
+      case 'gamehub':
         return Icons.hub;
       case 'mtool':
         return Icons.auto_fix_high;

@@ -10,7 +10,7 @@ void main() {
     test('keeps exactly the supported tool families', () {
       final mainIds =
           GameToolsData.mainTools.map((t) => t.id).toSet();
-      expect(mainIds, {'joiplay', 'minhub', 'mtool'});
+      expect(mainIds, {'joiplay', 'gamehub', 'mtool'});
     });
 
     test('removed tools stay removed', () {
@@ -24,6 +24,7 @@ void main() {
         'onscripter',
         'ppsspp',
         'kirikiroid2',
+        'minhub',
       ]) {
         expect(GameToolsService.getToolById(removed), isNull,
             reason: '$removed should not be in the catalog');
