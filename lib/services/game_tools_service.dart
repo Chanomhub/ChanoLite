@@ -8,6 +8,7 @@ import 'installed_apps_service.dart';
 import '../managers/download_manager.dart';
 
 import 'game_tools_catalog.dart';
+import '../managers/library_manager.dart';
 
 /// The Neko RPGXP activity an intent should target, or [isOpenApp] to just
 /// launch the player and let the user pick the game manually.
@@ -329,13 +330,26 @@ class GameToolsService {
     }
   }
 
-  /// Launch game with JoiPlay
+  /// Launch game with JoiPlay.
+  ///
+  /// Verified from cyou.joiplay.joiplay (jadx): the VIEW intent lands in
+  /// SplashActivity → MainActivity → LauncherFragment.showTitleDialogWithIntent,
+  /// which builds a pre-filled Add-Game entry from the path — the user only
+  /// confirms the title and taps Next. JoiPlay needs the EXECUTABLE path
+  /// (index.html / Game.exe) to pre-fill; a bare folder can't be resolved.
+  /// Games live in the public Downloads dir (saveInPublicStorage), which
+  /// JoiPlay can read via its MANAGE_EXTERNAL_STORAGE permission.
   static Future<bool> _launchJoiPlay(String gamePath) async {
     try {
+      var target = gamePath;
+      if (FileSystemEntity.typeSync(gamePath) == FileSystemEntityType.directory) {
+        final exe = await LibraryManager.findGameExecutable(gamePath);
+        if (exe != null) target = exe;
+      }
       final intent = AndroidIntent(
         action: 'android.intent.action.VIEW',
         package: 'cyou.joiplay.joiplay',
-        data: 'file://$gamePath',
+        data: 'file://$target',
       );
       await intent.launch();
       return true;
