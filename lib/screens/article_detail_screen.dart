@@ -17,6 +17,7 @@ import 'package:chanolite/models/article_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chanolite/services/api/comment_service.dart';
 import 'package:chanolite/widgets/comment_section_widget.dart';
+import 'package:chanolite/widgets/engine_guide_sheet.dart';
 
 
 class ArticleDetailScreen extends StatefulWidget {
@@ -724,6 +725,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       title: article.title,
       articleSlug: article.slug,
     );
+
+    if (dialogContext.mounted) {
+      EngineGuideSheet.showForEngine(
+        dialogContext,
+        gameTitle: article.title,
+        engine: article.engine,
+      );
+    }
 
     if (dialogContext.mounted) {
       ScaffoldMessenger.of(dialogContext).showSnackBar(

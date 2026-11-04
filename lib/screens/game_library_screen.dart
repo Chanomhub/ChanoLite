@@ -378,7 +378,7 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
           action: SnackBarAction(
             label: 'Get Tools',
             onPressed: () {
-              // Navigate to tools tab (index 3)
+              Navigator.of(context).pushNamed('/tools');
             },
           ),
         ),
