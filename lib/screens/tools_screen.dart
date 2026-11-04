@@ -351,6 +351,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
       case 'ppsspp':
         return Icons.gamepad;
       case 'exagear':
+      case 'winlator':
         return Icons.computer;
       case 'mtool':
         return Icons.auto_fix_high;

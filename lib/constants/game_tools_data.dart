@@ -195,22 +195,6 @@ class GameToolsData {
       ],
     ),
 
-    // ExaGear (for Windows games)
-    GameTool(
-      id: 'exagear',
-      name: 'ExaGear',
-      description: 'Windows emulator for running PC games on Android (discontinued — use Winlator instead)',
-      packageName: 'com.eltechs.ed',
-      supportedEngines: ['Windows', 'PC', 'Win32', 'Wolf RPG Editor', 'Wolf RPG'],
-      downloadSources: [
-        ToolDownloadSource(
-          name: 'APKPure',
-          url: 'https://apkpure.com/exagear-windows-emulator/com.eltechs.ed',
-          type: SourceType.apk,
-        ),
-      ],
-    ),
-
     // Winlator (active ExaGear successor for Windows games)
     GameTool(
       id: 'winlator',
@@ -346,13 +330,13 @@ class GameToolsData {
       ],
       downloadSources: [
         ToolDownloadSource(
-          name: 'Patreon / Official Website',
-          url: 'https://h-game18.xyz/',
+          name: 'Official Site (h-game18.xyz)',
+          url: 'https://h-game18.xyz/minhub/',
           type: SourceType.website,
         ),
         ToolDownloadSource(
-          name: 'Direct APK Download',
-          url: 'https://github.com/Chanomhub/ChanoLite',
+          name: 'Direct APK (v0.9.9)',
+          url: 'https://pub-5c8ab05667bd4a25a3ff4033246d4339.r2.dev/Minhub/MinHub_0.9.9_Update.apk',
           type: SourceType.apk,
         ),
       ],
