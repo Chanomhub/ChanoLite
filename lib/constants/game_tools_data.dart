@@ -195,17 +195,101 @@ class GameToolsData {
       ],
     ),
 
-    // Exagear (for Windows games)
+    // ExaGear (for Windows games)
     GameTool(
       id: 'exagear',
       name: 'ExaGear',
-      description: 'Windows emulator for running PC games on Android',
+      description: 'Windows emulator for running PC games on Android (discontinued — use Winlator instead)',
       packageName: 'com.eltechs.ed',
       supportedEngines: ['Windows', 'PC', 'Win32', 'Wolf RPG Editor', 'Wolf RPG'],
       downloadSources: [
         ToolDownloadSource(
           name: 'APKPure',
           url: 'https://apkpure.com/exagear-windows-emulator/com.eltechs.ed',
+          type: SourceType.apk,
+        ),
+      ],
+    ),
+
+    // Winlator (active ExaGear successor for Windows games)
+    GameTool(
+      id: 'winlator',
+      name: 'Winlator',
+      description: 'Wine + Box86/Box64 environment for running Windows games on Android — the maintained ExaGear successor (Wolf RPG via LC_ALL ja_JP setups)',
+      packageName: 'com.winlator',
+      testedVersion: 'v11.2',
+      supportedEngines: ['Windows', 'PC', 'Win32', 'Wolf RPG Editor', 'Wolf RPG'],
+      downloadSources: [
+        ToolDownloadSource(
+          name: 'GitHub Releases',
+          url: 'https://github.com/brunodev85/winlator/releases',
+          type: SourceType.github,
+        ),
+        ToolDownloadSource(
+          name: 'Official Site',
+          url: 'https://winlator.com',
+          type: SourceType.website,
+        ),
+      ],
+    ),
+
+    // Neko RPGXP Player (JoiPlay alternative for RGSS games)
+    GameTool(
+      id: 'neko-rpgxp',
+      name: 'Neko RPGXP Player',
+      description: 'Native RGSS player for RPG Maker XP/VX/VX Ace/MV games — some games that fail on JoiPlay run here (games go in /sdcard/KernysRGSS)',
+      packageName: 'net.kernys.rgss',
+      testedVersion: 'v2.01',
+      supportedEngines: [
+        'RPG Maker XP',
+        'RPG Maker VX',
+        'RPG Maker VX Ace',
+        'RPG Maker MV',
+        'RPGM',
+        'RPGMV',
+      ],
+      downloadSources: [
+        ToolDownloadSource(
+          name: 'Google Play',
+          url: 'https://play.google.com/store/apps/details?id=net.kernys.rgss',
+          type: SourceType.googlePlay,
+        ),
+        ToolDownloadSource(
+          name: 'APKPure',
+          url: 'https://apkpure.net/neko-rpgxp-player/net.kernys.rgss',
+          type: SourceType.apk,
+        ),
+        ToolDownloadSource(
+          name: 'Uptodown',
+          url: 'https://neko-rpgxp-beta-v1-27.en.uptodown.com/android',
+          type: SourceType.apk,
+        ),
+      ],
+    ),
+
+    // Maldives Player (MV/MZ specialist, updated regularly)
+    GameTool(
+      id: 'maldives',
+      name: 'Maldives Player (RPG MV/MZ)',
+      description: 'Specialized RPG Maker MV/MZ player — plugin auto-fix, NPOT texture patch (black-box images), WebGL 2 renderer and performance upgrades',
+      packageName: 'net.miririt.maldivesplayer',
+      testedVersion: 'v5.04',
+      supportedEngines: [
+        'RPG Maker MV',
+        'RPG Maker MZ',
+        'RPGM',
+        'RPGMV',
+        'RPGMZ',
+      ],
+      downloadSources: [
+        ToolDownloadSource(
+          name: 'Google Play',
+          url: 'https://play.google.com/store/apps/details?id=net.miririt.maldivesplayer',
+          type: SourceType.googlePlay,
+        ),
+        ToolDownloadSource(
+          name: 'Uptodown',
+          url: 'https://maldives-player-rpg-mv-mz.en.uptodown.com/android',
           type: SourceType.apk,
         ),
       ],
