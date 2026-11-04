@@ -131,21 +131,13 @@ class GameToolsService {
     }
   }
 
-  /// Launch game with MinHub
+  /// Launch game with MinHub.
+  ///
+  /// Its manifest (com.minhub.gamehub v0.9.9) exports no generic file/content
+  /// VIEW filter — only minhub://game and patreon-callback deep links — so an
+  /// ACTION_VIEW file:// intent can never resolve; open the app directly.
   static Future<bool> _launchMinHub(String gamePath) async {
-    try {
-      final dataUri = gamePath.startsWith('/') ? 'file://$gamePath' : gamePath;
-      final intent = AndroidIntent(
-        action: 'android.intent.action.VIEW',
-        package: 'com.minhub.gamehub',
-        data: dataUri,
-      );
-      await intent.launch();
-      return true;
-    } catch (e) {
-      print('GameToolsService: Error launching MinHub: $e');
-      return await InstalledAppsService.launchApp('com.minhub.gamehub');
-    }
+    return await InstalledAppsService.launchApp('com.minhub.gamehub');
   }
 
   /// Launch game with JoiPlay.
