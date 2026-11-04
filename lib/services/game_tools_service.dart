@@ -88,9 +88,6 @@ class GameToolsService {
         case 'joiplay-tyrano':
           return await _launchJoiPlay(gamePath);
 
-        case 'kirikiroid2':
-          return await _launchKirikiroid2(gamePath);
-
         case 'minhub':
           return await _launchMinHub(gamePath);
 
@@ -157,16 +154,6 @@ class GameToolsService {
       // Fallback: just open JoiPlay
       return await InstalledAppsService.launchApp('cyou.joiplay.joiplay');
     }
-  }
-
-  /// Launch game with Kirikiroid2.
-  ///
-  /// Its manifest (1.3.9 GitHub build, package org.tvp.kirikiri2_free_10309)
-  /// exports only the MAIN/LAUNCHER filter — no VIEW/data filter — and
-  /// KR2Activity never reads launch intents: the game is picked in-app via
-  /// its file browser (games are .xp3 archives / folders).
-  static Future<bool> _launchKirikiroid2(String gamePath) async {
-    return await InstalledAppsService.launchApp('org.tvp.kirikiri2');
   }
 
   /// Get installation status for all tools

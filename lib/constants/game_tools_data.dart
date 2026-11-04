@@ -111,27 +111,6 @@ class GameToolsData {
       parentToolId: 'joiplay',
     ),
 
-    // Kirikiroid2
-    GameTool(
-      id: 'kirikiroid2',
-      name: 'Kirikiroid2',
-      description: 'Player for Kirikiri/KAG engine visual novels (.xp3 files)',
-      packageName: 'org.tvp.kirikiri2',
-      supportedEngines: ['Kirikiri', 'KAG', 'Kirikiri2', 'xp3'],
-      downloadSources: [
-        ToolDownloadSource(
-          name: 'GitHub',
-          url: 'https://github.com/zeas2/Kirikiroid2/releases',
-          type: SourceType.github,
-        ),
-        ToolDownloadSource(
-          name: 'APKFab',
-          url: 'https://apkfab.com/kirikiroid2/org.tvp.kirikiri2',
-          type: SourceType.apk,
-        ),
-      ],
-    ),
-
     // MinHub (GameHub) - Multi-engine Visual Novel & RPG Game Launcher
     GameTool(
       id: 'minhub',

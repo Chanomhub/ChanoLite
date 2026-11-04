@@ -7,10 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// launcher switch keeps a case for every remaining main tool.
 void main() {
   group('trimmed catalog', () {
-    test('keeps exactly the four supported tool families', () {
+    test('keeps exactly the supported tool families', () {
       final mainIds =
           GameToolsData.mainTools.map((t) => t.id).toSet();
-      expect(mainIds, {'joiplay', 'kirikiroid2', 'minhub', 'mtool'});
+      expect(mainIds, {'joiplay', 'minhub', 'mtool'});
     });
 
     test('removed tools stay removed', () {
@@ -23,6 +23,7 @@ void main() {
         'easyrpg',
         'onscripter',
         'ppsspp',
+        'kirikiroid2',
       ]) {
         expect(GameToolsService.getToolById(removed), isNull,
             reason: '$removed should not be in the catalog');

@@ -328,8 +328,6 @@ class _ToolsScreenState extends State<ToolsScreen> {
     switch (toolId) {
       case 'joiplay':
         return Icons.sports_esports;
-      case 'kirikiroid2':
-        return Icons.menu_book;
       case 'minhub':
         return Icons.hub;
       case 'mtool':
