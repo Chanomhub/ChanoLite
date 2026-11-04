@@ -1,184 +1,114 @@
-
-class CreateModDto {
-  final String name;
-  final String description;
-  final String version;
-  final String downloadLink;
-  final String? creditTo;
-  final List<String> images;
-  final String type;
-  final List<int> categoryIds;
-
-  CreateModDto({
-    required this.name,
-    required this.description,
-    required this.version,
-    required this.downloadLink,
-    this.creditTo,
-    required this.images,
-    required this.type,
-    required this.categoryIds,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'name': name,
-    'description': description,
-    'version': version,
-    'downloadLink': downloadLink,
-    if (creditTo != null) 'creditTo': creditTo,
-    'images': images,
-    'type': type,
-    'categoryIds': categoryIds,
-  };
-}
-
-class UpdateModDto {
+/// A mod listed under an article (GET /api/mods/article/:slug).
+///
+/// Deliberately lenient: the backend's ModResponseDto omits fields it has no
+/// value for, so everything except [id] is nullable and parsed tolerantly.
+class GameMod {
+  final int id;
   final String? name;
   final String? description;
   final String? version;
   final String? downloadLink;
-  final String? creditTo;
-  final List<String>? images;
+  final String? status;
   final String? type;
-  final List<int>? categoryIds;
+  final String? language;
+  final String? creditTo;
+  final String? sha256;
+  final int? fileSizeBytes;
+  final DateTime? createdAt;
 
-  UpdateModDto({
+  GameMod({
+    required this.id,
     this.name,
     this.description,
     this.version,
     this.downloadLink,
-    this.creditTo,
-    this.images,
+    this.status,
     this.type,
-    this.categoryIds,
-  });
-
-  Map<String, dynamic> toJson() => {
-    if (name != null) 'name': name,
-    if (description != null) 'description': description,
-    if (version != null) 'version': version,
-    if (downloadLink != null) 'downloadLink': downloadLink,
-    if (creditTo != null) 'creditTo': creditTo,
-    if (images != null) 'images': images,
-    if (type != null) 'type': type,
-    if (categoryIds != null) 'categoryIds': categoryIds,
-  };
-}
-
-enum ModStatus { PENDING, APPROVED, REJECTED }
-
-class Mod {
-  final int id;
-  final String name;
-  final String description;
-  final String version;
-  final String downloadLink;
-  final String? creditTo;
-  final List<String> images;
-  final String type;
-  final ModStatus status;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final int articleId;
-  final int authorId;
-  final List<ModCategory> categories;
-
-  Mod({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.version,
-    required this.downloadLink,
+    this.language,
     this.creditTo,
-    required this.images,
-    required this.type,
-    required this.status,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.articleId,
-    required this.authorId,
-    required this.categories,
+    this.sha256,
+    this.fileSizeBytes,
+    this.createdAt,
   });
 
-  factory Mod.fromJson(Map<String, dynamic> json) {
-    return Mod(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      version: json['version'],
-      downloadLink: json['downloadLink'],
-      creditTo: json['creditTo'],
-      images: List<String>.from(json['images']),
-      type: json['type'],
-      status: ModStatus.values.firstWhere(
-        (e) => e.toString() == 'ModStatus.${json['status']}',
-        orElse: () => ModStatus.PENDING,
-      ),
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
-      articleId: json['articleId'],
-      authorId: json['authorId'],
-      categories: (json['categories'] as List)
-          .map((e) => ModCategory.fromJson(e as Map<String, dynamic>))
-          .toList(),
+  factory GameMod.fromJson(Map<String, dynamic> json) {
+    return GameMod(
+      id: (json['id'] as num).toInt(),
+      name: json['name']?.toString(),
+      description: json['description']?.toString(),
+      version: json['version']?.toString(),
+      downloadLink: json['downloadLink']?.toString(),
+      status: json['status']?.toString(),
+      type: json['type']?.toString(),
+      language: json['language']?.toString(),
+      creditTo: json['creditTo']?.toString(),
+      sha256: json['sha256']?.toString(),
+      fileSizeBytes: json['fileSizeBytes'] is num
+          ? (json['fileSizeBytes'] as num).toInt()
+          : int.tryParse('${json['fileSizeBytes']}'),
+      createdAt: DateTime.tryParse('${json['createdAt']}'),
     );
   }
 }
 
-class ModCategory {
-  final int id;
-  final String name;
-  final String slug;
-
-  ModCategory({
-    required this.id,
-    required this.name,
-    required this.slug,
-  });
-
-  factory ModCategory.fromJson(Map<String, dynamic> json) {
-    return ModCategory(
-      id: json['id'],
-      name: json['name'],
-      slug: json['slug'],
-    );
-  }
-}
-
-class CreateModCategoryDto {
-  final String name;
-  final String slug;
-
-  CreateModCategoryDto({required this.name, required this.slug});
-
-  Map<String, dynamic> toJson() => {
-    'name': name,
-    'slug': slug,
-  };
-}
-
-typedef ModCategoryResponseDto = ModCategory;
-
-class SingleModResponse {
-  final Mod mod;
-
-  SingleModResponse({required this.mod});
-
-  factory SingleModResponse.fromJson(Map<String, dynamic> json) {
-    return SingleModResponse(mod: Mod.fromJson(json['mod']));
-  }
-}
-
-class MultipleModsResponse {
-  final List<Mod> mods;
+class GameModsResponse {
+  final List<GameMod> mods;
   final int modsCount;
 
-  MultipleModsResponse({required this.mods, required this.modsCount});
+  GameModsResponse({required this.mods, required this.modsCount});
 
-  factory MultipleModsResponse.fromJson(Map<String, dynamic> json) {
-    return MultipleModsResponse(
-      mods: (json['mods'] as List).map((e) => Mod.fromJson(e as Map<String, dynamic>)).toList(),
-      modsCount: json['modsCount'],
+  factory GameModsResponse.fromJson(dynamic json) {
+    final map = json is Map<String, dynamic> ? json : <String, dynamic>{};
+    final list = map['mods'];
+    final mods = list is List
+        ? list
+              .whereType<Map<String, dynamic>>()
+              .map(GameMod.fromJson)
+              .toList()
+        : <GameMod>[];
+    return GameModsResponse(
+      mods: mods,
+      modsCount: (map['modsCount'] as num?)?.toInt() ?? mods.length,
+    );
+  }
+}
+
+/// A mod installed into a game directory. Persisted as `installed_mods.json`
+/// next to the game, same shape ChanoX2 uses plus [backupId] for rollback.
+class InstalledModRecord {
+  final int id;
+  final String name;
+  final String version;
+  final String installedAt;
+  final String filename;
+  final String backupId;
+
+  InstalledModRecord({
+    required this.id,
+    required this.name,
+    required this.version,
+    required this.installedAt,
+    required this.filename,
+    required this.backupId,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'version': version,
+    'installedAt': installedAt,
+    'filename': filename,
+    'backupId': backupId,
+  };
+
+  factory InstalledModRecord.fromJson(Map<String, dynamic> json) {
+    return InstalledModRecord(
+      id: (json['id'] as num).toInt(),
+      name: json['name']?.toString() ?? '',
+      version: json['version']?.toString() ?? '',
+      installedAt: json['installedAt']?.toString() ?? '',
+      filename: json['filename']?.toString() ?? '',
+      backupId: json['backupId']?.toString() ?? '',
     );
   }
 }

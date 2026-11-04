@@ -177,6 +177,7 @@ class DownloadManager extends ChangeNotifier {
         version: metadata?['version'],
         engine: metadata?['engine'],
         title: metadata?['title'],
+        articleSlug: metadata?['articleSlug'],
       );
       newTasks.add(localTask);
     }
@@ -217,6 +218,7 @@ class DownloadManager extends ChangeNotifier {
         String? version,
         String? engine,
         String? title,
+        String? articleSlug,
       }) async {
     print('=== DownloadManager.startDownload START ===');
     print('URL: $url');
@@ -298,17 +300,18 @@ class DownloadManager extends ChangeNotifier {
     }
 
     // Save metadata
-    if (imageUrl != null || version != null || engine != null || title != null) {
+    if (imageUrl != null || version != null || engine != null || title != null || articleSlug != null) {
       final metadataString = prefs.getString(metadataKey);
       final Map<String, dynamic> metadataMap = metadataString != null
           ? json.decode(metadataString)
           : {};
-      
+
       metadataMap[url] = {
         'imageUrl': imageUrl,
         'version': version,
         'engine': engine,
         'title': title,
+        'articleSlug': articleSlug,
       };
       
       await prefs.setString(metadataKey, json.encode(metadataMap));
@@ -347,6 +350,7 @@ class DownloadManager extends ChangeNotifier {
           version: version,
           engine: engine,
           title: title,
+          articleSlug: articleSlug,
         );
         _tasks.add(task);
         print('DownloadManager: Task added to list. Total tasks: ${_tasks.length}');
@@ -538,13 +542,17 @@ class DownloadManager extends ChangeNotifier {
       final imageUrl = task.imageUrl;
       final version = task.version;
       final engine = task.engine;
+      final title = task.title;
+      final articleSlug = task.articleSlug;
       await deleteTask(task);
       await startDownload(
-        task.url, 
+        task.url,
         suggestedFilename: fileName,
         imageUrl: imageUrl,
         version: version,
         engine: engine,
+        title: title,
+        articleSlug: articleSlug,
       );
     }
   }

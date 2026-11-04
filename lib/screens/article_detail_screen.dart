@@ -697,6 +697,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             version: article.ver?.toString(),
             engine: article.engine,
             title: article.title,
+            articleSlug: article.slug,
           );
           debugPrint('ArticleDetailScreen: Download started directly (fallback)');
         }
@@ -721,6 +722,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       version: article.ver?.toString(),
       engine: article.engine,
       title: article.title,
+      articleSlug: article.slug,
     );
 
     if (dialogContext.mounted) {

@@ -26,6 +26,7 @@ class DownloadTask {
   final String? packageName; // Package name of installed app
   final String? engine; // Game engine (e.g., 'RPG Maker MV', 'Ren\'Py')
   final String? title; // Real title of the downloaded game/article
+  final String? articleSlug; // Slug of the article this download belongs to
 
   DownloadTask({
     required this.url,
@@ -40,6 +41,7 @@ class DownloadTask {
     this.packageName,
     this.engine,
     this.title,
+    this.articleSlug,
   });
 
   DownloadTask copyWith({
@@ -54,6 +56,7 @@ class DownloadTask {
     String? packageName,
     String? engine,
     String? title,
+    String? articleSlug,
   }) {
     return DownloadTask(
       url: url,
@@ -68,6 +71,7 @@ class DownloadTask {
       packageName: packageName ?? this.packageName,
       engine: engine ?? this.engine,
       title: title ?? this.title,
+      articleSlug: articleSlug ?? this.articleSlug,
     );
   }
 
@@ -85,6 +89,7 @@ class DownloadTask {
       packageName: json['packageName'] as String?,
       engine: json['engine'] as String?,
       title: json['title'] as String?,
+      articleSlug: json['articleSlug'] as String?,
     );
   }
 
@@ -102,6 +107,7 @@ class DownloadTask {
       'packageName': packageName,
       'engine': engine,
       'title': title,
+      'articleSlug': articleSlug,
     };
   }
 

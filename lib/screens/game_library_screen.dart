@@ -8,6 +8,8 @@ import 'package:chanolite/screens/login_screen.dart';
 import 'package:chanolite/services/file_opener_service.dart';
 import 'package:chanolite/services/installed_apps_service.dart';
 import 'package:chanolite/services/game_tools_service.dart';
+import 'package:chanolite/services/mod_assets.dart';
+import 'package:chanolite/widgets/mod_list_sheet.dart';
 import 'package:chanolite/widgets/tool_selection_dialog.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
@@ -106,6 +108,16 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
                 onTap: () async {
                   Navigator.of(context).pop();
                   await _playWithTool(context, task);
+                },
+              ),
+            // Install mods into an extracted game directory
+            if (task.status == DownloadTaskStatus.complete && !isApk)
+              ListTile(
+                leading: const Icon(Icons.extension),
+                title: const Text('Mods'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _openModsSheet(context, task);
                 },
               ),
             // Launch installed app option (only for APK with package name)
@@ -228,6 +240,65 @@ class _GameLibraryScreenState extends State<GameLibraryScreen> {
   bool _isRecognizedGame(DownloadTask task) {
     final name = (task.fileName ?? '').toLowerCase();
     return name.contains('rpgm') || name.contains('rpgmaker') || name.contains('renpy');
+  }
+
+  /// Opens the mod installer for an extracted game. Reuses the same
+  /// resolve/extract logic as play: archives are extracted in place first,
+  /// then the mods sheet operates on the resulting directory.
+  Future<void> _openModsSheet(BuildContext context, DownloadTask task) async {
+    if (task.filePath == null) return;
+
+    var resolvedPath = await LibraryManager.resolveGamePath(
+      filePath: task.filePath!,
+      fileName: task.fileName,
+    );
+    if (resolvedPath == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Game file or directory not found')),
+        );
+      }
+      return;
+    }
+
+    final isArchive = resolvedPath.toLowerCase().endsWith('.zip') ||
+        resolvedPath.toLowerCase().endsWith('.7z') ||
+        resolvedPath.toLowerCase().endsWith('.rar');
+    if (isArchive) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Extracting game archive...')),
+        );
+      }
+      final extractedDir = await LibraryManager.extractGameArchive(
+        filePath: resolvedPath,
+        fileName: task.fileName,
+        onProgress: (_, __) {},
+      );
+      if (extractedDir != null) {
+        resolvedPath = extractedDir;
+        if (context.mounted) {
+          Provider.of<DownloadManager>(context, listen: false)
+              .updateTaskPath(task.url, extractedDir);
+        }
+      }
+    }
+
+    // The patcher targets the game root (it locates data/ itself), so strip a
+    // direct executable path back to its directory.
+    var gameDir = resolvedPath;
+    if (FileSystemEntity.typeSync(gameDir) == FileSystemEntityType.file) {
+      gameDir = File(gameDir).parent.path;
+    }
+
+    final thaiFont = await ModAssets.loadThaiFont();
+    if (!context.mounted) return;
+    await ModListSheet.show(
+      context,
+      gameDir: gameDir,
+      articleSlug: task.articleSlug,
+      thaiFontBytes: thaiFont,
+    );
   }
 
   String _getEffectiveEngine(DownloadTask task) {
