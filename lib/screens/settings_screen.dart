@@ -220,10 +220,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 8),
             Card(
-              child: ListTile(
-                leading: const Icon(Icons.discord),
-                title: const Text('Go to Community'),
-                onTap: () => _openUpdateLink('https://discord.gg/QTmeKmKf2w'),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.discord),
+                    title: const Text('Go to Community'),
+                    onTap: () => _openUpdateLink('https://discord.gg/QTmeKmKf2w'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.send),
+                    title: const Text('Telegram'),
+                    onTap: () => _openUpdateLink('https://t.me/NightCryptic'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.code),
+                    title: const Text('GitHub'),
+                    onTap: () => _openUpdateLink('https://github.com/Chanomhub'),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
