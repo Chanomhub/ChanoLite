@@ -223,11 +223,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.discord),
-                    title: const Text('Go to Community'),
-                    onTap: () => _openUpdateLink('https://discord.gg/QTmeKmKf2w'),
-                  ),
-                  ListTile(
                     leading: const Icon(Icons.send),
                     title: const Text('Telegram'),
                     onTap: () => _openUpdateLink('https://t.me/NightCryptic'),
